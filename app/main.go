@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/commands"
 	"net"
 	"os"
 )
@@ -29,7 +30,7 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		go handleConnection(conn)
+		go commands.HandleConnection(conn)
 	}
 
 }
