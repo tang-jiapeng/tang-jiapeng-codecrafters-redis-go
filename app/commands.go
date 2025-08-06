@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 )
 
 // CommandHandler 定义命令处理接口
@@ -13,9 +14,22 @@ type CommandHandler interface {
 
 type CommandRegistry map[string]CommandHandler
 
+// Store 封装线程安全的键值存储
+type Store struct {
+	sync.RWMutex
+	m map[string]string
+}
+
+// 全局存储
+var store = Store{
+	m: make(map[string]string),
+}
+
 var Commands = CommandRegistry{
 	"PING": &PingCommand{},
 	"ECHO": &EchoCommand{},
+	"SET":  &SetCommand{},
+	"GET":  &GetCommand{},
 }
 
 // PingCommand 处理 PING 命令
@@ -36,6 +50,37 @@ func (c *EchoCommand) Handle(args []string) (string, error) {
 		return "", fmt.Errorf("ECHO command requires exactly one argument")
 	}
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(args[0]), args[0]), nil
+}
+
+// SetCommand 处理 SET 命令
+type SetCommand struct{}
+
+func (c *SetCommand) Handle(args []string) (string, error) {
+	if len(args) != 2 {
+		return "", fmt.Errorf("SET command requires exactly two arguments")
+	}
+	store.Lock()
+	store.m[args[0]] = args[1]
+	store.Unlock()
+	fmt.Printf("SET key=%s, value=%s, store=%v\n", args[0], args[1], store.m)
+	return "+OK\r\n", nil
+}
+
+// GetCommand 处理 GET 命令
+type GetCommand struct{}
+
+func (c *GetCommand) Handle(args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("GET command requires exactly one argument")
+	}
+	store.RLock()
+	value, exists := store.m[args[0]]
+	store.RUnlock()
+	fmt.Printf("GET key=%s, exists=%v, value=%s, store=%v\n", args[0], exists, value, store.m)
+	if !exists {
+		return "$-1\r\n", nil
+	}
+	return fmt.Sprintf("$%d\r\n%s\r\n", len(value), value), nil
 }
 
 // handleConnection 处理客户端连接
