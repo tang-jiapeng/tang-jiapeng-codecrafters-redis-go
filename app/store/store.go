@@ -84,6 +84,33 @@ func (s *Store) AppendList(key string, elements []string) (int, error) {
 	return length, nil
 }
 
+func (s *Store) GetListRange(key string, start, stop int) ([]string, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	entry, exists := s.m[key]
+	if !exists {
+		fmt.Printf("Store: GetListRange key=%s, exists=false\n", key)
+		return []string{}, nil
+	}
+	list, ok := entry.(ListEntry)
+	if !ok {
+		fmt.Printf("Store: GetListRange key=%s, invalid type (not a list)\n", key)
+		return nil, fmt.Errorf("WRONGTYPE key is not a list")
+	}
+	length := len(list)
+	if start >= length || start > stop {
+		fmt.Printf("Store: GetListRange key=%s, start=%d, stop=%d, empty (start >= length or start > stop)\n", key, start, stop)
+		return []string{}, nil
+	}
+	if stop >= length {
+		stop = length - 1
+	}
+	result := list[start : stop+1]
+	fmt.Printf("Store: GetListRange key=%s, start=%d, stop=%d, result=%v\n", key, start, stop, result)
+	return result, nil
+}
+
 // delete 删除键
 func (s *Store) delete(key string) {
 	s.Lock()

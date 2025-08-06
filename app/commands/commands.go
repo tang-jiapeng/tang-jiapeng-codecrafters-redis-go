@@ -21,11 +21,12 @@ var storeInstance = store.NewStore()
 
 // Commands 注册命令
 var Commands = CommandRegistry{
-	"PING":  &PingCommand{},
-	"ECHO":  &EchoCommand{},
-	"SET":   NewSetCommand(storeInstance),
-	"GET":   NewGetCommand(storeInstance),
-	"RPUSH": NewRpushCommand(storeInstance),
+	"PING":   &PingCommand{},
+	"ECHO":   &EchoCommand{},
+	"SET":    NewSetCommand(storeInstance),
+	"GET":    NewGetCommand(storeInstance),
+	"RPUSH":  NewRPushCommand(storeInstance),
+	"LRANGE": NewLRangeCommand(storeInstance),
 }
 
 // HandleConnection 处理客户端连接

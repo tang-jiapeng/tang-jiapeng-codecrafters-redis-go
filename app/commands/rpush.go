@@ -5,17 +5,17 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
-type RpushCommand struct {
+type RPushCommand struct {
 	store *store.Store
 }
 
-func NewRpushCommand(s *store.Store) *RpushCommand {
-	return &RpushCommand{
+func NewRPushCommand(s *store.Store) *RPushCommand {
+	return &RPushCommand{
 		store: s,
 	}
 }
 
-func (c *RpushCommand) Handle(args []string) (string, error) {
+func (c *RPushCommand) Handle(args []string) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("RPUSH command requires at least two arguments")
 	}
