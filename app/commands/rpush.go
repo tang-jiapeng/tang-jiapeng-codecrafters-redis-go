@@ -16,12 +16,12 @@ func NewRpushCommand(s *store.Store) *RpushCommand {
 }
 
 func (c *RpushCommand) Handle(args []string) (string, error) {
-	if len(args) != 2 {
-		return "", fmt.Errorf("RPUSH command requires exactly two arguments")
+	if len(args) < 2 {
+		return "", fmt.Errorf("RPUSH command requires at least two arguments")
 	}
 	key := args[0]
-	element := args[1]
-	length, err := c.store.AppendList(key, element)
+	elements := args[1:]
+	length, err := c.store.AppendList(key, elements)
 	if err != nil {
 		return "", err
 	}

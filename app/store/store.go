@@ -59,16 +59,16 @@ func (s *Store) GetString(key string) (string, bool) {
 }
 
 // AppendList 追加元素到列表或创建新列表
-func (s *Store) AppendList(key, element string) (int, error) {
+func (s *Store) AppendList(key string, elements []string) (int, error) {
 	s.Lock()
 	defer s.Unlock()
 
 	entry, exists := s.m[key]
 	if !exists {
-		list := ListEntry{element}
+		list := ListEntry(elements)
 		s.m[key] = list
 		length := len(list)
-		fmt.Printf("Store: AppendList key=%s, element=%s, new list=%v, length=%d\n", key, element, list, length)
+		fmt.Printf("Store: AppendList key=%s, element=%s, new list=%v, length=%d\n", key, elements, list, length)
 		return length, nil
 	}
 
@@ -77,10 +77,10 @@ func (s *Store) AppendList(key, element string) (int, error) {
 		fmt.Printf("Store: AppendList key=%s, invalid type (not a list)\n", key)
 		return 0, fmt.Errorf("WRONGTYPE key is not a list")
 	}
-	list = append(list, element)
+	list = append(list, elements...)
 	s.m[key] = list
 	length := len(list)
-	fmt.Printf("Store: AppendList key=%s, element=%s, updated list=%v, length=%d\n", key, element, list, length)
+	fmt.Printf("Store: AppendList key=%s, element=%s, updated list=%v, length=%d\n", key, elements, list, length)
 	return length, nil
 }
 
