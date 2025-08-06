@@ -7,12 +7,12 @@ import (
 )
 
 type LRangeCommand struct {
-	listStore *store.ListStore
+	listOps store.ListOps
 }
 
 func NewLRangeCommand(s *store.Store) *LRangeCommand {
 	return &LRangeCommand{
-		listStore: store.NewListStore(s),
+		listOps: store.NewListStore(s),
 	}
 }
 
@@ -29,7 +29,7 @@ func (c *LRangeCommand) Handle(args []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid stop index: %s", err.Error())
 	}
-	elements, err := c.listStore.GetListRange(key, start, stop)
+	elements, err := c.listOps.GetListRange(key, start, stop)
 	if err != nil {
 		return "", err
 	}

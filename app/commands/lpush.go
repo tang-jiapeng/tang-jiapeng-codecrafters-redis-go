@@ -6,12 +6,12 @@ import (
 )
 
 type LPushCommand struct {
-	listStore *store.ListStore
+	listOps store.ListOps
 }
 
 func NewLPushCommand(s *store.Store) *LPushCommand {
 	return &LPushCommand{
-		listStore: store.NewListStore(s),
+		listOps: store.NewListStore(s),
 	}
 }
 
@@ -22,7 +22,7 @@ func (c *LPushCommand) Handle(args []string) (string, error) {
 	key := args[0]
 	elements := args[1:]
 
-	length, err := c.listStore.PrependList(key, elements)
+	length, err := c.listOps.PrependList(key, elements)
 	if err != nil {
 		return "", err
 	}

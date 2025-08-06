@@ -107,3 +107,20 @@ func (s *ListStore) PrependList(key string, elements []string) (int, error) {
 	fmt.Printf("ListStore: PrependList key=%s, elements=%v, updated list=%v, length=%d\n", key, elements, list, length)
 	return length, nil
 }
+
+// GetListLength 获取对应列表的长度
+func (s *ListStore) GetListLength(key string) (int, error) {
+	data, exists := s.store.GetData(key)
+	if !exists {
+		fmt.Printf("ListStore: GetListLength key=%s, exists=false\n", key)
+		return 0, nil
+	}
+	list, ok := data.(ListEntry)
+	if !ok {
+		fmt.Printf("ListStore: GetListLength key=%s, invalid type (not a list)\n", key)
+		return 0, fmt.Errorf("WRONGTYPE key is not a list")
+	}
+	length := len(list)
+	fmt.Printf("ListStore: GetListLength key=%s, length=%d\n", key, length)
+	return length, nil
+}

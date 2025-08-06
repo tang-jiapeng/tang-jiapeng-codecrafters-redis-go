@@ -6,12 +6,12 @@ import (
 )
 
 type GetCommand struct {
-	stringStore *store.StringStore
+	stringOps store.StringOps
 }
 
 func NewGetCommand(s *store.Store) *GetCommand {
 	return &GetCommand{
-		stringStore: store.NewStringStore(s),
+		stringOps: store.NewStringStore(s),
 	}
 }
 
@@ -20,7 +20,7 @@ func (c *GetCommand) Handle(args []string) (string, error) {
 		return "", fmt.Errorf("GET command requires exactly one argument")
 	}
 
-	value, exists := c.stringStore.GetString(args[0])
+	value, exists := c.stringOps.GetString(args[0])
 	if !exists {
 		return "$-1\r\n", nil
 	}

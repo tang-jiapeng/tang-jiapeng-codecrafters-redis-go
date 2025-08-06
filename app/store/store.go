@@ -34,6 +34,7 @@ type ListOps interface {
 	AppendList(key string, elements []string) (int, error)
 	PrependList(key string, elements []string) (int, error)
 	GetListRange(key string, start, stop int) ([]string, error)
+	GetListLength(key string) (int, error)
 }
 
 // GetData 获取键对应的数据
