@@ -84,6 +84,7 @@ func (s *Store) AppendList(key string, elements []string) (int, error) {
 	return length, nil
 }
 
+// GetListRange 获取列表指定范围的元素
 func (s *Store) GetListRange(key string, start, stop int) ([]string, error) {
 	s.RLock()
 	defer s.RUnlock()
@@ -99,6 +100,21 @@ func (s *Store) GetListRange(key string, start, stop int) ([]string, error) {
 		return nil, fmt.Errorf("WRONGTYPE key is not a list")
 	}
 	length := len(list)
+	// 处理负索引
+	if start < 0 {
+		start = length + start
+		if start < 0 {
+			start = 0 // 负索引超出范围，设置为 0
+		}
+	}
+	if stop < 0 {
+		stop = length + stop
+		if stop < 0 {
+			stop = 0 // 负索引超出范围，设置为 0
+		}
+	}
+
+	// 处理范围
 	if start >= length || start > stop {
 		fmt.Printf("Store: GetListRange key=%s, start=%d, stop=%d, empty (start >= length or start > stop)\n", key, start, stop)
 		return []string{}, nil
