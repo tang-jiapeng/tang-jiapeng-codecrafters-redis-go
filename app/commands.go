@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // CommandHandler 定义命令处理接口
@@ -14,15 +16,22 @@ type CommandHandler interface {
 
 type CommandRegistry map[string]CommandHandler
 
+// StoreEntry 表示键值对及其过期时间
+type StoreEntry struct {
+	value     string
+	expiresAt time.Time
+	hasExpiry bool
+}
+
 // Store 封装线程安全的键值存储
 type Store struct {
 	sync.RWMutex
-	m map[string]string
+	m map[string]StoreEntry
 }
 
 // 全局存储
 var store = Store{
-	m: make(map[string]string),
+	m: make(map[string]StoreEntry),
 }
 
 var Commands = CommandRegistry{
@@ -56,11 +65,39 @@ func (c *EchoCommand) Handle(args []string) (string, error) {
 type SetCommand struct{}
 
 func (c *SetCommand) Handle(args []string) (string, error) {
-	if len(args) != 2 {
-		return "", fmt.Errorf("SET command requires exactly two arguments")
+	if len(args) < 2 {
+		return "", fmt.Errorf("SET command requires at least two arguments")
 	}
+	if len(args) > 4 {
+		return "", fmt.Errorf("SET command supports up to four arguments (key, value, PX, expiry)")
+	}
+
+	key := args[0]
+	value := args[1]
+	var expiresAt time.Time
+	hasExpiry := false
+
+	if len(args) == 4 {
+		if strings.ToUpper(args[2]) != "PX" {
+			return "", fmt.Errorf("invalid option: %s, expected PX", args[2])
+		}
+		expiryMs, err := strconv.Atoi(args[3])
+		if err != nil {
+			return "", fmt.Errorf("invalid PX value: %s", err.Error())
+		}
+		if expiryMs < 0 {
+			return "", fmt.Errorf("PX value must be positive")
+		}
+		expiresAt = time.Now().Add(time.Duration(expiryMs) * time.Millisecond)
+		hasExpiry = true
+	}
+
 	store.Lock()
-	store.m[args[0]] = args[1]
+	store.m[key] = StoreEntry{
+		value:     value,
+		expiresAt: expiresAt,
+		hasExpiry: hasExpiry,
+	}
 	store.Unlock()
 	fmt.Printf("SET key=%s, value=%s, store=%v\n", args[0], args[1], store.m)
 	return "+OK\r\n", nil
@@ -74,13 +111,21 @@ func (c *GetCommand) Handle(args []string) (string, error) {
 		return "", fmt.Errorf("GET command requires exactly one argument")
 	}
 	store.RLock()
-	value, exists := store.m[args[0]]
+	entry, exists := store.m[args[0]]
 	store.RUnlock()
-	fmt.Printf("GET key=%s, exists=%v, value=%s, store=%v\n", args[0], exists, value, store.m)
 	if !exists {
+		fmt.Printf("GET key=%s, exists=false, store=%v\n", args[0], store.m)
 		return "$-1\r\n", nil
 	}
-	return fmt.Sprintf("$%d\r\n%s\r\n", len(value), value), nil
+	if entry.hasExpiry && time.Now().After(entry.expiresAt) {
+		store.Lock()
+		delete(store.m, args[0])
+		store.Unlock()
+		fmt.Printf("GET key=%s, expired, deleted, store=%v\n", args[0], store.m)
+		return "$-1\r\n", nil
+	}
+	fmt.Printf("GET key=%s, exists=true, value=%s, store=%v\n", args[0], entry.value, store.m)
+	return fmt.Sprintf("$%d\r\n%s\r\n", len(entry.value), entry.value), nil
 }
 
 // handleConnection 处理客户端连接
