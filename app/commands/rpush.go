@@ -6,12 +6,12 @@ import (
 )
 
 type RPushCommand struct {
-	store *store.Store
+	listStore *store.ListStore
 }
 
 func NewRPushCommand(s *store.Store) *RPushCommand {
 	return &RPushCommand{
-		store: s,
+		listStore: store.NewListStore(s),
 	}
 }
 
@@ -21,7 +21,7 @@ func (c *RPushCommand) Handle(args []string) (string, error) {
 	}
 	key := args[0]
 	elements := args[1:]
-	length, err := c.store.AppendList(key, elements)
+	length, err := c.listStore.AppendList(key, elements)
 	if err != nil {
 		return "", err
 	}

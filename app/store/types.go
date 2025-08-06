@@ -2,11 +2,6 @@ package store
 
 import "time"
 
-// DataType 定义支持的数据类型
-type DataType interface {
-	isDataType()
-}
-
 // StringEntry 表示字符串键值对及其过期时间
 type StringEntry struct {
 	Value     string
@@ -14,8 +9,13 @@ type StringEntry struct {
 	HasExpiry bool
 }
 
+// ListEntry 表示列表类型数据
 type ListEntry []string
 
-// 实现 DataType 接口
-func (StringEntry) isDataType() {}
-func (ListEntry) isDataType()   {}
+func (StringEntry) Type() string {
+	return "string"
+}
+
+func (ListEntry) Type() string {
+	return "list"
+}

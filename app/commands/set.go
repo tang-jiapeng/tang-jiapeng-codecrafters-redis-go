@@ -9,11 +9,13 @@ import (
 )
 
 type SetCommand struct {
-	store *store.Store
+	stringStore *store.StringStore
 }
 
 func NewSetCommand(s *store.Store) *SetCommand {
-	return &SetCommand{store: s}
+	return &SetCommand{
+		stringStore: store.NewStringStore(s),
+	}
 }
 
 func (c *SetCommand) Handle(args []string) (string, error) {
@@ -44,6 +46,6 @@ func (c *SetCommand) Handle(args []string) (string, error) {
 		hasExpiry = true
 	}
 
-	c.store.SetString(key, value, expiresAt, hasExpiry)
+	c.stringStore.SetString(key, value, expiresAt, hasExpiry)
 	return "+OK\r\n", nil
 }
