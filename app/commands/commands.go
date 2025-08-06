@@ -27,6 +27,7 @@ var Commands = CommandRegistry{
 	"GET":    NewGetCommand(storeInstance),
 	"RPUSH":  NewRPushCommand(storeInstance),
 	"LRANGE": NewLRangeCommand(storeInstance),
+	"LPUSH":  NewLPushCommand(storeInstance),
 }
 
 // HandleConnection 处理客户端连接

@@ -58,6 +58,14 @@ func (s *Store) GetString(key string) (string, bool) {
 	return value, true
 }
 
+// delete 删除键
+func (s *Store) delete(key string) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.m, key)
+	fmt.Printf("Store: delete key=%s\n", key)
+}
+
 // AppendList 追加元素到列表或创建新列表
 func (s *Store) AppendList(key string, elements []string) (int, error) {
 	s.Lock()
@@ -127,10 +135,39 @@ func (s *Store) GetListRange(key string, start, stop int) ([]string, error) {
 	return result, nil
 }
 
-// delete 删除键
-func (s *Store) delete(key string) {
+// PrependList 预插入元素到列表或创建新列表
+func (s *Store) PrependList(key string, elements []string) (int, error) {
+	if len(elements) == 0 {
+		return 0, fmt.Errorf("no elements provided for PrependList")
+	}
 	s.Lock()
 	defer s.Unlock()
-	delete(s.m, key)
-	fmt.Printf("Store: delete key=%s\n", key)
+
+	entry, exist := s.m[key]
+	if !exist {
+		// 键不存在，创建新列表（元素顺序反转以模拟预插入）
+		list := make(ListEntry, len(elements))
+		for i, elem := range elements {
+			list[len(elements)-1-i] = elem
+		}
+		s.m[key] = list
+		length := len(list)
+		fmt.Printf("Store: PrependList key=%s, elements=%v, new list=%v, length=%d\n", key, elements, list, length)
+		return length, nil
+	}
+	list, ok := entry.(ListEntry)
+	if !ok {
+		fmt.Printf("Store: PrependList key=%s, invalid type (not a list)\n", key)
+		return 0, fmt.Errorf("WRONGTYPE key is not a list")
+	}
+	// 预插入元素（反转 elements 后追加到开头）
+	newList := make(ListEntry, len(elements))
+	for i, elem := range elements {
+		newList[len(elements)-i-1] = elem
+	}
+	list = append(newList, list...)
+	s.m[key] = list
+	length := len(list)
+	fmt.Printf("Store: PrependList key=%s, elements=%v, updated list=%v, length=%d\n", key, elements, list, length)
+	return length, nil
 }
