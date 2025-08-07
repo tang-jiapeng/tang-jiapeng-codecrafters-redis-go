@@ -38,6 +38,14 @@ func NewStreamStore() *StreamStore {
 	}
 }
 
+// Exists 检查流是否存在
+func (s *StreamStore) Exists(key string) bool {
+	s.RLock()
+	defer s.RUnlock()
+	_, exists := s.streams[key]
+	return exists
+}
+
 // parseID 解析ID字符串为毫秒时间和序列号
 func parseID(id string) (millis int64, seq int64, err error) {
 	parts := strings.Split(id, "-")
@@ -83,12 +91,30 @@ func (s *StreamStore) validateID(key, newID string) error {
 	return nil
 }
 
-// Exists 检查流是否存在
-func (s *StreamStore) Exists(key string) bool {
-	s.RLock()
-	defer s.RUnlock()
-	_, exists := s.streams[key]
-	return exists
+// generateNextSequence 生成下一个序列号
+func (s *StreamStore) generateNextSequence(key string, newMillis int64) (int64, error) {
+	entries, exists := s.streams[key]
+	if !exists || len(entries) == 0 {
+		// 流为空，特殊处理 0 时间部分
+		if newMillis == 0 {
+			return 1, nil // 0-0 不允许，所以从 1 开始
+		}
+		return 0, nil
+	}
+	// 获取最后一个条目
+	lastEntry := entries[len(entries)-1]
+	lastMillis, lastSeq, err := parseID(lastEntry.ID)
+	if err != nil {
+		return 0, fmt.Errorf("Invalid last entry ID: %s", lastEntry.ID)
+	}
+	switch {
+	case newMillis > lastMillis:
+		return 0, nil // 新时间部分，序列号从 0 开始
+	case newMillis == lastMillis:
+		return lastSeq + 1, nil // 相同时间部分，序列号递增
+	default:
+		return 0, ErrIDNotGreaterThanLast // 新时间部分小于最后条目
+	}
 }
 
 // AddEntry 向指定流添加条目（不存在则创建）
@@ -96,8 +122,25 @@ func (s *StreamStore) AddEntry(key, entryID string, fields map[string]string) (s
 	s.Lock()
 	defer s.Unlock()
 
+	finalID := entryID
+	parts := strings.Split(entryID, "-")
+
+	// 处理自动生成序列号的情况 (millis-*)
+	if len(parts) == 2 && parts[1] == "*" {
+		millisPart, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			return "", ErrInvalidIDFormat
+		}
+		// 生成序列号
+		seq, err := s.generateNextSequence(key, millisPart)
+		if err != nil {
+			return "", err
+		}
+		finalID = fmt.Sprintf("%d-%d", millisPart, seq)
+	}
+
 	// 验证ID
-	if err := s.validateID(key, entryID); err != nil {
+	if err := s.validateID(key, finalID); err != nil {
 		return "", err
 	}
 
@@ -106,9 +149,9 @@ func (s *StreamStore) AddEntry(key, entryID string, fields map[string]string) (s
 		s.streams[key] = make([]StreamEntry, 0)
 	}
 	entry := StreamEntry{
-		ID:     entryID,
+		ID:     finalID,
 		Fields: fields,
 	}
 	s.streams[key] = append(s.streams[key], entry)
-	return entryID, nil
+	return finalID, nil
 }
