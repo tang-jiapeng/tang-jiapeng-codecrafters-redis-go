@@ -11,8 +11,8 @@ type StringOps interface {
 	GetString(key string) (string, bool)
 }
 
-// stringEntry 表示字符串及其可选的过期信息
-type stringEntry struct {
+// StringEntry 表示字符串及其可选的过期信息
+type StringEntry struct {
 	Value     string
 	ExpiresAt time.Time
 	HasExpiry bool
@@ -21,27 +21,27 @@ type stringEntry struct {
 // StringStore 实现字符串操作
 type StringStore struct {
 	sync.RWMutex
-	m map[string]stringEntry
+	m map[string]StringEntry
 }
 
 func NewStringStore() *StringStore {
 	return &StringStore{
-		m: make(map[string]stringEntry),
+		m: make(map[string]StringEntry),
 	}
 }
 
 // checkString 检查键是否存在、类型是否正确以及是否过期
 // 必须在调用者持有读锁或写锁的情况下调用
-func (s *StringStore) checkString(key string) (stringEntry, bool) {
+func (s *StringStore) checkString(key string) (StringEntry, bool) {
 	entry, exists := s.m[key]
 	if !exists {
-		return stringEntry{}, false
+		return StringEntry{}, false
 	}
 
 	if entry.HasExpiry && time.Now().After(entry.ExpiresAt) {
 		// 需要写锁来删除过期键，调用者需确保已持有写锁
 		delete(s.m, key)
-		return stringEntry{}, false
+		return StringEntry{}, false
 	}
 
 	return entry, true
@@ -52,7 +52,7 @@ func (s *StringStore) SetString(key, value string, expiresAt time.Time, hasExpir
 	s.Lock()
 	defer s.Unlock()
 
-	entry := stringEntry{
+	entry := StringEntry{
 		Value:     value,
 		ExpiresAt: expiresAt,
 		HasExpiry: hasExpiry,

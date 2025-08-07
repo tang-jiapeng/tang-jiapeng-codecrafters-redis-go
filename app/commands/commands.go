@@ -19,6 +19,7 @@ type CommandRegistry map[string]CommandHandler
 // 初始化独立的 Store 实例
 var stringStore = store.NewStringStore()
 var listStore = store.NewListStore()
+var streamStore = store.NewStreamStore()
 
 // Commands 注册命令
 var Commands = CommandRegistry{
@@ -32,7 +33,8 @@ var Commands = CommandRegistry{
 	"LLEN":   NewLLenCommand(listStore),
 	"LPOP":   NewLPopCommand(listStore),
 	"BLPOP":  NewBLPopCommand(listStore),
-	"TYPE":   NewTypeCommand(stringStore, listStore),
+	"TYPE":   NewTypeCommand(stringStore, listStore, streamStore),
+	"XADD":   NewXAddCommand(streamStore),
 }
 
 // HandleConnection 处理客户端连接

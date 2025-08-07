@@ -8,12 +8,14 @@ import (
 type TypeCommand struct {
 	stringOps store.StringOps
 	listOps   store.ListOps
+	streamOps store.StreamOps
 }
 
-func NewTypeCommand(s store.StringOps, l store.ListOps) *TypeCommand {
+func NewTypeCommand(s store.StringOps, l store.ListOps, ss store.StreamOps) *TypeCommand {
 	return &TypeCommand{
 		stringOps: s,
 		listOps:   l,
+		streamOps: ss,
 	}
 }
 
@@ -28,6 +30,10 @@ func (c *TypeCommand) Handle(args []string) (string, error) {
 
 	if c.listOps.Exists(key) {
 		return "+list\r\n", nil
+	}
+
+	if c.streamOps.Exists(key) {
+		return "+stream\r\n", nil
 	}
 	return "+none\r\n", nil
 }
