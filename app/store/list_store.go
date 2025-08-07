@@ -199,6 +199,9 @@ func (s *ListStore) BLPopElement(key string, timeout time.Duration) (string, boo
 	var timeoutCh <-chan time.Time
 	if timeout > 0 {
 		timeoutCh = time.After(timeout)
+	} else if timeout == 0 {
+		// 0 表示无限阻塞
+		timeoutCh = nil
 	}
 
 	select {
@@ -224,7 +227,9 @@ func (s *ListStore) BLPopElement(key string, timeout time.Duration) (string, boo
 		if waiters, ok := s.waiters[key]; ok {
 			for i, waiter := range waiters {
 				if waiter == ch {
+					// 从切片中移除通道
 					s.waiters[key] = append(waiters[:i], waiters[i+1:]...)
+					// 清理空队列
 					if len(s.waiters[key]) == 0 {
 						delete(s.waiters, key)
 					}

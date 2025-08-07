@@ -22,11 +22,11 @@ func (c *BLPopCommand) Handle(args []string) (string, error) {
 		return "", fmt.Errorf("BLPOP command requires two arguments")
 	}
 	key := args[0]
-	timeoutSecond, err := strconv.Atoi(args[1])
+	timeoutSec, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
-		return "", fmt.Errorf("invalid value timeout: %d", timeoutSecond)
+		return "", fmt.Errorf("invalid value timeout: %q", args[1])
 	}
-	timeout := time.Duration(timeoutSecond) * time.Second
+	timeout := time.Duration(timeoutSec * float64(time.Second))
 	element, ok, err := c.listOps.BLPopElement(key, timeout)
 	if err != nil {
 		return "", err
