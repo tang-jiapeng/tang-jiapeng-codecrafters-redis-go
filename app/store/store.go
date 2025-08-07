@@ -35,6 +35,7 @@ type ListOps interface {
 	PrependList(key string, elements []string) (int, error)
 	GetListRange(key string, start, stop int) ([]string, error)
 	GetListLength(key string) (int, error)
+	PopLElement(key string) (string, bool, error)
 }
 
 // GetData 获取键对应的数据

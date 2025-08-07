@@ -29,6 +29,7 @@ var Commands = CommandRegistry{
 	"LRANGE": NewLRangeCommand(storeInstance),
 	"LPUSH":  NewLPushCommand(storeInstance),
 	"LLEN":   NewLLenCommand(storeInstance),
+	"LPOP":   NewLPopCommand(storeInstance),
 }
 
 // HandleConnection 处理客户端连接

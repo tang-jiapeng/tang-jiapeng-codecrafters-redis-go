@@ -11,24 +11,43 @@ func NewListStore(s *Store) *ListStore {
 	return &ListStore{store: s}
 }
 
+// checkList 检查键是否存在、类型是否正确以及列表是否为空
+// 必须在调用者持有读锁或写锁的情况下调用
+func (s *ListStore) checkList(key string) (ListEntry, bool, error) {
+	data, exists := s.store.m[key]
+	if !exists {
+		fmt.Printf("ListStore: checkList key=%s, exists=false\n", key)
+		return nil, false, nil
+	}
+	list, ok := data.(ListEntry)
+	if !ok {
+		fmt.Printf("ListStore: checkList key=%s, invalid type (not a list)\n", key)
+		return nil, false, fmt.Errorf("WRONGTYPE key is not a list")
+	}
+	if len(list) == 0 {
+		fmt.Printf("ListStore: checkList key=%s, list empty\n", key)
+		return nil, false, nil
+	}
+	return list, true, nil
+}
+
 // AppendList 追加元素到列表或创建新列表
 func (s *ListStore) AppendList(key string, elements []string) (int, error) {
-	data, exists := s.store.GetData(key)
-	if !exists {
-		list := ListEntry(elements)
-		s.store.SetData(key, list)
+	s.store.Lock()
+	defer s.store.Unlock()
+	list, ok, err := s.checkList(key)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		list = ListEntry(elements)
+		s.store.m[key] = list
 		length := len(list)
 		fmt.Printf("ListStore: AppendList key=%s, elements=%v, new list=%v, length=%d\n", key, elements, list, length)
 		return length, nil
 	}
-
-	list, ok := data.(ListEntry)
-	if !ok {
-		fmt.Printf("ListStore: AppendList key=%s, invalid type (not a list)\n", key)
-		return 0, fmt.Errorf("WRONGTYPE key is not a list")
-	}
 	list = append(list, elements...)
-	s.store.SetData(key, list)
+	s.store.m[key] = list
 	length := len(list)
 	fmt.Printf("ListStore: AppendList key=%s, elements=%v, updated list=%v, length=%d\n", key, elements, list, length)
 	return length, nil
@@ -36,15 +55,14 @@ func (s *ListStore) AppendList(key string, elements []string) (int, error) {
 
 // GetListRange 获取列表指定范围的元素
 func (s *ListStore) GetListRange(key string, start, stop int) ([]string, error) {
-	data, exists := s.store.GetData(key)
-	if !exists {
-		fmt.Printf("ListStore: GetListRange key=%s, exists=false\n", key)
-		return []string{}, nil
+	s.store.RLock()
+	defer s.store.RUnlock()
+	list, ok, err := s.checkList(key)
+	if err != nil {
+		return nil, err
 	}
-	list, ok := data.(ListEntry)
 	if !ok {
-		fmt.Printf("ListStore: GetListRange key=%s, invalid type (not a list)\n", key)
-		return nil, fmt.Errorf("WRONGTYPE key is not a list")
+		return []string{}, nil
 	}
 	length := len(list)
 	// 处理负索引
@@ -79,22 +97,22 @@ func (s *ListStore) PrependList(key string, elements []string) (int, error) {
 	if len(elements) == 0 {
 		return 0, fmt.Errorf("no elements provided for PrependList")
 	}
-	data, exists := s.store.GetData(key)
-	if !exists {
-		// 键不存在，创建新列表（元素顺序反转以模拟预插入）
-		list := make(ListEntry, len(elements))
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	list, ok, err := s.checkList(key)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		list = make(ListEntry, len(elements))
 		for i, elem := range elements {
 			list[len(elements)-1-i] = elem
 		}
-		s.store.SetData(key, list)
+		s.store.m[key] = list
 		length := len(list)
 		fmt.Printf("ListStore: PrependList key=%s, elements=%v, new list=%v, length=%d\n", key, elements, list, length)
 		return length, nil
-	}
-	list, ok := data.(ListEntry)
-	if !ok {
-		fmt.Printf("ListStore: PrependList key=%s, invalid type (not a list)\n", key)
-		return 0, fmt.Errorf("WRONGTYPE key is not a list")
 	}
 	// 预插入元素（反转 elements 后追加到开头）
 	newList := make(ListEntry, len(elements))
@@ -102,7 +120,7 @@ func (s *ListStore) PrependList(key string, elements []string) (int, error) {
 		newList[len(elements)-i-1] = elem
 	}
 	list = append(newList, list...)
-	s.store.SetData(key, list)
+	s.store.m[key] = list
 	length := len(list)
 	fmt.Printf("ListStore: PrependList key=%s, elements=%v, updated list=%v, length=%d\n", key, elements, list, length)
 	return length, nil
@@ -110,17 +128,45 @@ func (s *ListStore) PrependList(key string, elements []string) (int, error) {
 
 // GetListLength 获取对应列表的长度
 func (s *ListStore) GetListLength(key string) (int, error) {
-	data, exists := s.store.GetData(key)
-	if !exists {
-		fmt.Printf("ListStore: GetListLength key=%s, exists=false\n", key)
-		return 0, nil
-	}
-	list, ok := data.(ListEntry)
-	if !ok {
-		fmt.Printf("ListStore: GetListLength key=%s, invalid type (not a list)\n", key)
-		return 0, fmt.Errorf("WRONGTYPE key is not a list")
+	s.store.RLock()
+	defer s.store.RUnlock()
+	list, ok, err := s.checkList(key)
+	if err != nil || !ok {
+		return 0, err
 	}
 	length := len(list)
 	fmt.Printf("ListStore: GetListLength key=%s, length=%d\n", key, length)
 	return length, nil
+}
+
+// PopLElement 移除并返回列表的第一个元素
+func (s *ListStore) PopLElement(key string) (string, bool, error) {
+	// 第一阶段：使用读锁检查数据
+	s.store.RLock()
+	list, ok, err := s.checkList(key)
+	if err != nil || !ok {
+		s.store.RUnlock()
+		return "", ok, err
+	}
+	s.store.RUnlock()
+
+	// 第二阶段：获取写锁并重新验证
+	s.store.Lock()
+	defer s.store.Unlock()
+
+	list, ok, err = s.checkList(key)
+	if err != nil || !ok {
+		return "", ok, err
+	}
+
+	element := list[0]
+	list = list[1:]
+	if len(list) == 0 {
+		delete(s.store.m, key)
+		fmt.Printf("ListStore: PopLElement key=%s, popped=%s, list empty, deleted\n", key, element)
+	} else {
+		s.store.m[key] = list
+		fmt.Printf("ListStore: PopLElement key=%s, popped=%s, updated list=%v\n", key, element, list)
+	}
+	return element, true, nil
 }
