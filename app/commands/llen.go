@@ -9,9 +9,9 @@ type LLenCommand struct {
 	listOps store.ListOps
 }
 
-func NewLLenCommand(s *store.Store) *LLenCommand {
+func NewLLenCommand(s store.ListOps) *LLenCommand {
 	return &LLenCommand{
-		listOps: store.NewListStore(s),
+		listOps: s,
 	}
 }
 

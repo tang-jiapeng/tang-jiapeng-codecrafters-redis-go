@@ -10,9 +10,9 @@ type LPopCommand struct {
 	listOps store.ListOps
 }
 
-func NewLPopCommand(s *store.Store) *LPopCommand {
+func NewLPopCommand(s store.ListOps) *LPopCommand {
 	return &LPopCommand{
-		listOps: store.NewListStore(s),
+		listOps: s,
 	}
 }
 

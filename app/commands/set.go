@@ -12,9 +12,9 @@ type SetCommand struct {
 	stringOps store.StringOps
 }
 
-func NewSetCommand(s *store.Store) *SetCommand {
+func NewSetCommand(s store.StringOps) *SetCommand {
 	return &SetCommand{
-		stringOps: store.NewStringStore(s),
+		stringOps: s,
 	}
 }
 

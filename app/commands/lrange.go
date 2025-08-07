@@ -10,9 +10,9 @@ type LRangeCommand struct {
 	listOps store.ListOps
 }
 
-func NewLRangeCommand(s *store.Store) *LRangeCommand {
+func NewLRangeCommand(s store.ListOps) *LRangeCommand {
 	return &LRangeCommand{
-		listOps: store.NewListStore(s),
+		listOps: s,
 	}
 }
 

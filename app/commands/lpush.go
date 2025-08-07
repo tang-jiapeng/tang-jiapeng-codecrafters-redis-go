@@ -9,9 +9,9 @@ type LPushCommand struct {
 	listOps store.ListOps
 }
 
-func NewLPushCommand(s *store.Store) *LPushCommand {
+func NewLPushCommand(s store.ListOps) *LPushCommand {
 	return &LPushCommand{
-		listOps: store.NewListStore(s),
+		listOps: s,
 	}
 }
 

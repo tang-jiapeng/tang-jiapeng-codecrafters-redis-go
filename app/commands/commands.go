@@ -16,20 +16,21 @@ type CommandHandler interface {
 // CommandRegistry 存储命令名称到处理器的映射
 type CommandRegistry map[string]CommandHandler
 
-// 全局存储，确保初始化
-var storeInstance = store.NewStore()
+// 初始化独立的 Store 实例
+var stringStore = store.NewStringStore()
+var listStore = store.NewListStore()
 
 // Commands 注册命令
 var Commands = CommandRegistry{
 	"PING":   &PingCommand{},
 	"ECHO":   &EchoCommand{},
-	"SET":    NewSetCommand(storeInstance),
-	"GET":    NewGetCommand(storeInstance),
-	"RPUSH":  NewRPushCommand(storeInstance),
-	"LRANGE": NewLRangeCommand(storeInstance),
-	"LPUSH":  NewLPushCommand(storeInstance),
-	"LLEN":   NewLLenCommand(storeInstance),
-	"LPOP":   NewLPopCommand(storeInstance),
+	"SET":    NewSetCommand(stringStore),
+	"GET":    NewGetCommand(stringStore),
+	"RPUSH":  NewRPushCommand(listStore),
+	"LRANGE": NewLRangeCommand(listStore),
+	"LPUSH":  NewLPushCommand(listStore),
+	"LLEN":   NewLLenCommand(listStore),
+	"LPOP":   NewLPopCommand(listStore),
 }
 
 // HandleConnection 处理客户端连接

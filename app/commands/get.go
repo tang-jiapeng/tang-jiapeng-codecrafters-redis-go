@@ -9,9 +9,9 @@ type GetCommand struct {
 	stringOps store.StringOps
 }
 
-func NewGetCommand(s *store.Store) *GetCommand {
+func NewGetCommand(s store.StringOps) *GetCommand {
 	return &GetCommand{
-		stringOps: store.NewStringStore(s),
+		stringOps: s,
 	}
 }
 
