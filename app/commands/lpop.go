@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
+	"strconv"
 )
 
 type LPopCommand struct {
@@ -16,16 +17,32 @@ func NewLPopCommand(s *store.Store) *LPopCommand {
 }
 
 func (c *LPopCommand) Handle(args []string) (string, error) {
-	if len(args) != 1 {
-		return "", fmt.Errorf("LPOP command requires exactly one argument")
+	if len(args) < 1 || len(args) > 2 {
+		return "", fmt.Errorf("LPOP command requires one or two arguments")
 	}
 	key := args[0]
-	element, ok, err := c.listOps.PopLElement(key)
+	count := 1
+	if len(args) == 2 {
+		var err error
+		count, err = strconv.Atoi(args[1])
+		if err != nil {
+			return "", fmt.Errorf("invalid value not an integer or out of range: %s", args[1])
+		}
+		if count < 0 {
+			return "", fmt.Errorf("count must be non-negative, got %d", count)
+		}
+	}
+	elements, ok, err := c.listOps.PopLElement(key, count)
 	if err != nil {
 		return "", err
 	}
 	if !ok {
 		return "$-1\r\n", nil
 	}
-	return fmt.Sprintf("$%d\r\n%s\r\n", len(element), element), nil
+	resp := fmt.Sprintf("*%d\r\n", len(elements))
+	for _, elem := range elements {
+		resp += fmt.Sprintf("$%d\r\n%s\r\n", len(elem), elem)
+	}
+	fmt.Printf("LPOP key=%s, count=%d, popped=%v\n", key, count, elements)
+	return resp, nil
 }

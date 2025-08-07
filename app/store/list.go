@@ -140,13 +140,13 @@ func (s *ListStore) GetListLength(key string) (int, error) {
 }
 
 // PopLElement 移除并返回列表的第一个元素
-func (s *ListStore) PopLElement(key string) (string, bool, error) {
+func (s *ListStore) PopLElement(key string, count int) ([]string, bool, error) {
 	// 第一阶段：使用读锁检查数据
 	s.store.RLock()
 	list, ok, err := s.checkList(key)
 	if err != nil || !ok {
 		s.store.RUnlock()
-		return "", ok, err
+		return []string{}, ok, err
 	}
 	s.store.RUnlock()
 
@@ -156,17 +156,23 @@ func (s *ListStore) PopLElement(key string) (string, bool, error) {
 
 	list, ok, err = s.checkList(key)
 	if err != nil || !ok {
-		return "", ok, err
+		return []string{}, ok, err
 	}
 
-	element := list[0]
-	list = list[1:]
+	length := len(list)
+	popCount := count
+	if count > length {
+		popCount = length
+	}
+
+	popped := list[:popCount]
+	list = list[popCount:]
 	if len(list) == 0 {
 		delete(s.store.m, key)
-		fmt.Printf("ListStore: PopLElement key=%s, popped=%s, list empty, deleted\n", key, element)
+		fmt.Printf("ListStore: PopLElement key=%s, count=%d, popped=%v, list empty, deleted\n", key, count, popped)
 	} else {
 		s.store.m[key] = list
-		fmt.Printf("ListStore: PopLElement key=%s, popped=%s, updated list=%v\n", key, element, list)
+		fmt.Printf("ListStore: PopLElement key=%s, count=%d, popped=%v, updated list=%v\n", key, count, popped, list)
 	}
-	return element, true, nil
+	return popped, true, nil
 }
