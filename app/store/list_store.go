@@ -8,6 +8,7 @@ import (
 
 // ListOps 定义列表操作接口
 type ListOps interface {
+	Exists(key string) bool
 	AppendList(key string, elements []string) (int, error)
 	PrependList(key string, elements []string) (int, error)
 	GetListRange(key string, start, stop int) ([]string, error)
@@ -28,6 +29,14 @@ func NewListStore() *ListStore {
 		m:       make(map[string][]string),
 		waiters: make(map[string][]chan struct{}),
 	}
+}
+
+// Exists 是否存在key
+func (s *ListStore) Exists(key string) bool {
+	s.RLock()
+	defer s.RUnlock()
+	_, exists := s.m[key]
+	return exists
 }
 
 // checkList 检查键是否存在、类型是否正确以及列表是否为空
