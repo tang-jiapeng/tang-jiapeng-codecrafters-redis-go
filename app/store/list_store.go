@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 // ListOps 定义列表操作接口
@@ -11,19 +12,23 @@ type ListOps interface {
 	PrependList(key string, elements []string) (int, error)
 	GetListRange(key string, start, stop int) ([]string, error)
 	GetListLength(key string) (int, error)
-	PopLElement(key string, count int) ([]string, bool, error)
+	LPopElement(key string, count int) ([]string, bool, error)
+	BLPopElement(key string, timeout time.Duration) (string, bool, error)
 }
 
 // ListStore 实现列表操作
 type ListStore struct {
 	sync.RWMutex
-	m map[string][]string
+	m    map[string][]string
+	cond *sync.Cond // 用于阻塞等待
 }
 
 func NewListStore() *ListStore {
-	return &ListStore{
+	s := &ListStore{
 		m: make(map[string][]string),
 	}
+	s.cond = sync.NewCond(&s.RWMutex) // 注意：条件变量要绑定锁，这里用RWMutex的写锁
+	return s
 }
 
 // checkList 检查键是否存在、类型是否正确以及列表是否为空
@@ -50,6 +55,7 @@ func (s *ListStore) AppendList(key string, elements []string) (int, error) {
 		list = append(list, elements...)
 		s.m[key] = list
 	}
+	s.cond.Broadcast() // 新元素来了，唤醒所有阻塞的等待者
 	return len(s.m[key]), nil
 }
 
@@ -108,6 +114,8 @@ func (s *ListStore) PrependList(key string, elements []string) (int, error) {
 	} else {
 		s.m[key] = append(newList, list...)
 	}
+
+	s.cond.Broadcast() // 新元素来了，唤醒阻塞等待者
 	return len(s.m[key]), nil
 }
 
@@ -123,8 +131,8 @@ func (s *ListStore) GetListLength(key string) (int, error) {
 	return length, nil
 }
 
-// PopLElement 移除并返回列表的第一个元素
-func (s *ListStore) PopLElement(key string, count int) ([]string, bool, error) {
+// LPopElement 移除并返回列表的第一个元素
+func (s *ListStore) LPopElement(key string, count int) ([]string, bool, error) {
 	// 第一阶段：使用读锁检查数据
 	s.RLock()
 	list, ok, err := s.checkList(key)
@@ -151,4 +159,30 @@ func (s *ListStore) PopLElement(key string, count int) ([]string, bool, error) {
 		s.m[key] = remaining
 	}
 	return popped, true, nil
+}
+
+// BLPopElement 阻塞弹出列表头部元素，timeout 0 表示无限阻塞
+func (s *ListStore) BLPopElement(key string, timeout time.Duration) (string, bool, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	//start := time.Now()
+
+	for {
+		list, ok, err := s.checkList(key)
+		if err != nil {
+			return "", false, err
+		}
+		if ok && len(list) > 0 {
+			elem := list[0]
+			remaining := list[1:]
+			if len(remaining) == 0 {
+				delete(s.m, key)
+			} else {
+				s.m[key] = remaining
+			}
+			return elem, true, nil
+		}
+		s.cond.Wait()
+	}
 }

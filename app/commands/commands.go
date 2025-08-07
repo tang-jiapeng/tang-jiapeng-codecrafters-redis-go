@@ -31,6 +31,7 @@ var Commands = CommandRegistry{
 	"LPUSH":  NewLPushCommand(listStore),
 	"LLEN":   NewLLenCommand(listStore),
 	"LPOP":   NewLPopCommand(listStore),
+	"BLPOP":  NewBLPopCommand(listStore),
 }
 
 // HandleConnection 处理客户端连接

@@ -32,7 +32,7 @@ func (c *LPopCommand) Handle(args []string) (string, error) {
 			return "", fmt.Errorf("count must be non-negative, got %d", count)
 		}
 	}
-	elements, ok, err := c.listOps.PopLElement(key, count)
+	elements, ok, err := c.listOps.LPopElement(key, count)
 	if err != nil {
 		return "", err
 	}
