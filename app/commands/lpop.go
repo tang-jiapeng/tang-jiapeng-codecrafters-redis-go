@@ -39,6 +39,11 @@ func (c *LPopCommand) Handle(args []string) (string, error) {
 	if !ok {
 		return "$-1\r\n", nil
 	}
+	if count == 1 && len(elements) == 1 {
+		// 单元素返回批量字符串
+		return fmt.Sprintf("$%d\r\n%s\r\n", len(elements[0]), elements[0]), nil
+	}
+	// 多元素或 count>1 返回数组
 	resp := fmt.Sprintf("*%d\r\n", len(elements))
 	for _, elem := range elements {
 		resp += fmt.Sprintf("$%d\r\n%s\r\n", len(elem), elem)
