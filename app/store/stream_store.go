@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -123,10 +124,18 @@ func (s *StreamStore) AddEntry(key, entryID string, fields map[string]string) (s
 	defer s.Unlock()
 
 	finalID := entryID
-	parts := strings.Split(entryID, "-")
 
-	// 处理自动生成序列号的情况 (millis-*)
-	if len(parts) == 2 && parts[1] == "*" {
+	// 处理完全自动生成序列号的情况 (*)
+	if entryID == "*" {
+		millisNow := time.Now().UnixMilli()
+		// 生成序列号
+		seq, err := s.generateNextSequence(key, millisNow)
+		if err != nil {
+			return "", nil
+		}
+		finalID = fmt.Sprintf("%d-%d", millisNow, seq)
+	} else if parts := strings.Split(entryID, "-"); len(parts) == 2 && parts[1] == "*" {
+		// 处理部分自动生成序列号 (millis-*)
 		millisPart, err := strconv.ParseInt(parts[0], 10, 64)
 		if err != nil {
 			return "", ErrInvalidIDFormat
