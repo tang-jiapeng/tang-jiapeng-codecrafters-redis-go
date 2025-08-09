@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +20,7 @@ var (
 type StreamOps interface {
 	Exists(key string) bool
 	AddEntry(key, entryID string, fields map[string]string) (string, error)
+	GetRange(key string, startID string, endID string) ([]StreamEntry, error)
 }
 
 // StreamEntry 表示流中的一个条目
@@ -163,4 +165,60 @@ func (s *StreamStore) AddEntry(key, entryID string, fields map[string]string) (s
 	}
 	s.streams[key] = append(s.streams[key], entry)
 	return finalID, nil
+}
+
+// normalizeRangeID 规范化范围ID
+func normalizeRangeID(id string, isEnd bool) (millis int64, seq int64, err error) {
+	// 如果ID不包含'-'，则添加"-0"后缀
+	if !strings.Contains(id, "-") {
+		parsedMillis, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return 0, 0, ErrInvalidIDFormat
+		}
+
+		if isEnd {
+			return parsedMillis, math.MaxInt64, nil
+		}
+		return parsedMillis, 0, nil
+	}
+	return parseID(id)
+}
+
+// GetRange 获取指定范围内的条目
+func (s *StreamStore) GetRange(key string, startID string, endID string) ([]StreamEntry, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	entries, exists := s.streams[key]
+	if !exists {
+		return []StreamEntry{}, nil
+	}
+	startMillis, startSeq, err := normalizeRangeID(startID, false)
+	if err != nil {
+		return nil, err
+	}
+	endMillis, endSeq, err := normalizeRangeID(endID, false)
+	if err != nil {
+		return nil, err
+	}
+	result := []StreamEntry{}
+	for _, entry := range entries {
+		entryMillis, entrySeq, err := parseID(entry.ID)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid entry ID: %s", entry.ID)
+		}
+		switch {
+		case entryMillis < startMillis:
+			continue
+		case entryMillis == startMillis && entrySeq < startSeq:
+			continue
+		case entryMillis > endMillis:
+			break
+		case entryMillis == endMillis && entrySeq > endSeq:
+			break
+		default:
+			result = append(result, entry)
+		}
+	}
+	return result, nil
 }

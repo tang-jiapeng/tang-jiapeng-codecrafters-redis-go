@@ -35,6 +35,7 @@ var Commands = CommandRegistry{
 	"BLPOP":  NewBLPopCommand(listStore),
 	"TYPE":   NewTypeCommand(stringStore, listStore, streamStore),
 	"XADD":   NewXAddCommand(streamStore),
+	"XRANGE": NewXRangeCommand(streamStore),
 }
 
 // HandleConnection 处理客户端连接

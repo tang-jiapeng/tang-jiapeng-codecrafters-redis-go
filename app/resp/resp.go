@@ -58,3 +58,11 @@ func (r *RESPReader) ReadCommand() ([]string, error) {
 	}
 	return args, nil
 }
+
+// BulkString 返回 RESP 批量字符串格式
+func BulkString(s string) string {
+	if s == "" {
+		return "$-1\r\n"
+	}
+	return fmt.Sprintf("$%d\r\n%s\r\n", len(s), s)
+}
