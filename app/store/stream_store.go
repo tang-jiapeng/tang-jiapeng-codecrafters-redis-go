@@ -174,6 +174,11 @@ func normalizeRangeID(id string, isEnd bool) (millis int64, seq int64, err error
 		return 0, 0, nil
 	}
 
+	// 处理特殊值：+ 表示最大ID
+	if id == "+" {
+		return math.MaxInt64, math.MaxInt64, nil
+	}
+
 	// 如果ID不包含'-'，则添加"-0"后缀（对于结束ID使用最大序列号）
 	if !strings.Contains(id, "-") {
 		parsedMillis, err := strconv.ParseInt(id, 10, 64)
