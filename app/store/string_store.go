@@ -1,6 +1,8 @@
 package store
 
 import (
+	"errors"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -9,6 +11,7 @@ import (
 type StringOps interface {
 	SetString(key, value string, expiresAt time.Time, hasExpiry bool)
 	GetString(key string) (string, bool)
+	Increment(key string) (int, error)
 }
 
 // StringEntry 表示字符串及其可选的过期信息
@@ -70,4 +73,31 @@ func (s *StringStore) GetString(key string) (string, bool) {
 		return "", false
 	}
 	return entry.Value, true
+}
+
+func (s *StringStore) Increment(key string) (int, error) {
+	s.Lock()
+	defer s.Unlock()
+	// 检查并处理过期键
+	entry, exists := s.checkString(key)
+
+	var value int
+	var err error
+
+	if exists {
+		value, err = strconv.Atoi(entry.Value)
+		if err != nil {
+			return 0, errors.New("value is not an integer or out of range")
+		}
+	} else {
+		value = 0
+	}
+	value++
+	newEntry := StringEntry{
+		Value:     strconv.Itoa(value),
+		ExpiresAt: entry.ExpiresAt,
+		HasExpiry: entry.HasExpiry,
+	}
+	s.m[key] = newEntry
+	return value, nil
 }

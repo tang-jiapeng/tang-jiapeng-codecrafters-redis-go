@@ -27,6 +27,7 @@ var Commands = CommandRegistry{
 	"ECHO":   &EchoCommand{},
 	"SET":    NewSetCommand(stringStore),
 	"GET":    NewGetCommand(stringStore),
+	"INCR":   NewIncrCommand(stringStore),
 	"RPUSH":  NewRPushCommand(listStore),
 	"LRANGE": NewLRangeCommand(listStore),
 	"LPUSH":  NewLPushCommand(listStore),
