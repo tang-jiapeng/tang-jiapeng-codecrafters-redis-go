@@ -28,6 +28,7 @@ var Commands = CommandRegistry{
 	"COMMAND": &NoOpCommand{}, // 空实现
 	"INFO":    &NoOpCommand{}, // 空实现
 	"MULTI":   &MultiCommand{},
+	"EXEC":    &ExecCommand{},
 	"SET":     NewSetCommand(stringStore),
 	"GET":     NewGetCommand(stringStore),
 	"INCR":    NewIncrCommand(stringStore),
@@ -68,20 +69,18 @@ func HandleConnection(conn net.Conn) {
 		}
 
 		if len(args) == 0 {
-			fmt.Println("Empty command received")
 			continue
 		}
 
 		commandName := strings.ToUpper(args[0])
 		handler, exists := Commands[commandName]
 		if !exists {
-			fmt.Println("Unknown command: ", commandName)
 			conn.Write([]byte("-ERR unknown command\r\n"))
 			continue
 		}
 
-		// 事务模式下且命令不是 MULTI/EXEC/DISCARD，就排队
-		if connCtx.InTransaction && (commandName != "MULTI" || commandName != "EXEC" || commandName != "DISCARD") {
+		// 事务模式下且命令不是 MULTI/EXEC/DISCARD就排队
+		if connCtx.InTransaction && (commandName != "MULTI" && commandName != "EXEC" && commandName != "DISCARD") {
 			connCtx.QueuedCommands = append(connCtx.QueuedCommands, args)
 			conn.Write([]byte("+QUEUED\r\n"))
 			continue
