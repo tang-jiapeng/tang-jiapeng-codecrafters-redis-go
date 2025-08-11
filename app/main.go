@@ -1,15 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/commands"
 	"net"
 	"os"
 )
-
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -17,7 +14,13 @@ func main() {
 
 	// Uncomment this block to pass the first stage
 
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	// 定义 --port 参数，默认 6379
+	port := flag.Int("port", 6379, "port to listen on")
+	flag.Parse()
+
+	address := fmt.Sprintf("0.0.0.0:%d", *port)
+
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
