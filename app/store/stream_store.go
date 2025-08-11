@@ -285,11 +285,31 @@ func (s *StreamStore) ReadStreams(keys, startIDs []string) (map[string][]StreamE
 	return result, nil
 }
 
+// resolveStartID 解析起始ID，处理特殊值'$'
+func (s *StreamStore) resolveStartID(key, startID string) (string, error) {
+	if startID == "$" {
+		s.RLock()
+		defer s.RUnlock()
+
+		if entries, exists := s.streams[key]; exists && len(entries) > 0 {
+			// 返回最后一个条目的ID
+			return entries[len(entries)-1].ID, nil
+		}
+		// 流为空时使用"0-0"
+		return "0-0", nil
+	}
+	return startID, nil
+}
+
 // ReadStreamsBlocking 阻塞读取大于指定ID的条目
 func (s *StreamStore) ReadStreamsBlocking(keys, startsID []string, timeout time.Duration) (map[string][]StreamEntry, error) {
 	// XREAD BLOCK只支持单个streamKey
 	key, startID := keys[0], startsID[0]
-
+	// 解析特殊ID'$'
+	resolvedID, err := s.resolveStartID(key, startID)
+	if err != nil {
+		return nil, err
+	}
 	s.Lock()
 	// 创建等待通道并加入队列
 	ch := make(chan struct{})
@@ -315,14 +335,13 @@ func (s *StreamStore) ReadStreamsBlocking(keys, startsID []string, timeout time.
 		if !exists {
 			return map[string][]StreamEntry{}, nil
 		}
-
+		result := make(map[string][]StreamEntry)
 		// 获取所有大于startID的条目
 		resultEntry := []StreamEntry{}
-		startMillis, startSeq, err := parseID(startID)
+		startMillis, startSeq, err := parseID(resolvedID)
 		if err != nil {
 			return nil, err
 		}
-		result := make(map[string][]StreamEntry)
 		for _, entry := range entries {
 			entryMillis, entrySeq, err := parseID(entry.ID)
 			if err != nil {
