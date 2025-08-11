@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 	"strconv"
 )
@@ -37,17 +38,16 @@ func (c *LPopCommand) Handle(args []string) (string, error) {
 		return "", err
 	}
 	if !ok {
-		return "$-1\r\n", nil
+		return resp.EncodeNull(), nil
 	}
 	if count == 1 && len(elements) == 1 {
 		// 单元素返回批量字符串
-		return fmt.Sprintf("$%d\r\n%s\r\n", len(elements[0]), elements[0]), nil
+		return resp.EncodeBulkString(elements[0]), nil
 	}
 	// 多元素或 count>1 返回数组
-	resp := fmt.Sprintf("*%d\r\n", len(elements))
-	for _, elem := range elements {
-		resp += fmt.Sprintf("$%d\r\n%s\r\n", len(elem), elem)
+	respArray := make([]interface{}, len(elements))
+	for i, elem := range elements {
+		respArray[i] = elem
 	}
-	fmt.Printf("LPOP key=%s, count=%d, popped=%v\n", key, count, elements)
-	return resp, nil
+	return resp.EncodeArray(respArray), nil
 }

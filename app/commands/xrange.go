@@ -31,19 +31,21 @@ func (c *XRangeCommand) Handle(args []string) (string, error) {
 
 	respBuilder.WriteString(fmt.Sprintf("*%d\r\n", len(entries)))
 
+	// 构建 RESP 数组
+	respArray := make([]interface{}, 0, len(entries))
 	for _, entry := range entries {
-		// 每个条目是一个包含两个元素的数组：[ID, 字段列表]
-		respBuilder.WriteString("*2\r\n")
-		// 条目 ID (RESP 批量字符串)
-		respBuilder.WriteString(resp.BulkString(entry.ID))
-		// 字段列表 (RESP 数组)
-		fieldCount := len(entry.Fields) * 2
-		respBuilder.WriteString(fmt.Sprintf("*%d\r\n", fieldCount))
-
+		// 每个条目是一个数组：[ID, [field1, value1, field2, value2, ...]]
+		entryData := make([]interface{}, 2)
+		entryData[0] = entry.ID // 条目 ID
+		// 构建字段数组
+		fields := make([]interface{}, 0, len(entry.Fields)*2)
 		for key, value := range entry.Fields {
-			respBuilder.WriteString(resp.BulkString(key))
-			respBuilder.WriteString(resp.BulkString(value))
+			fields = append(fields, key, value)
 		}
+		entryData[1] = fields // 字段列表
+		respArray = append(respArray, entryData)
 	}
-	return respBuilder.String(), nil
+
+	// 编码为 RESP 数组
+	return resp.EncodeArray(respArray), nil
 }

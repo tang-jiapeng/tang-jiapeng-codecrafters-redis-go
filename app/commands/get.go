@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
@@ -22,8 +23,8 @@ func (c *GetCommand) Handle(args []string) (string, error) {
 
 	value, exists := c.stringOps.GetString(args[0])
 	if !exists {
-		return "$-1\r\n", nil
+		return resp.EncodeNull(), nil
 	}
 
-	return fmt.Sprintf("$%d\r\n%s\r\n", len(value), value), nil
+	return resp.EncodeBulkString(value), nil
 }

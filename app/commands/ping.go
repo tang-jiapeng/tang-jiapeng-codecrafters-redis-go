@@ -1,6 +1,9 @@
 package commands
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
+)
 
 // PingCommand 处理 PING 命令
 type PingCommand struct {
@@ -11,5 +14,5 @@ func (c *PingCommand) Handle(args []string) (string, error) {
 		return "", fmt.Errorf("PING command takes no arguments")
 	}
 	fmt.Println("PING command executed")
-	return "+PONG\r\n", nil
+	return resp.EncodeSimpleString("PONG"), nil
 }

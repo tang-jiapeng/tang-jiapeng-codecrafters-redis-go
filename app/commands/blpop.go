@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 	"strconv"
 	"time"
@@ -32,7 +33,9 @@ func (c *BLPopCommand) Handle(args []string) (string, error) {
 		return "", err
 	}
 	if !ok {
-		return "$-1\r\n", nil
+		return resp.EncodeNull(), nil
 	}
-	return fmt.Sprintf("*2\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n", len(key), key, len(element), element), nil
+	// 构建 RESP 数组 [key, element]
+	respArray := []interface{}{key, element}
+	return resp.EncodeArray(respArray), nil
 }

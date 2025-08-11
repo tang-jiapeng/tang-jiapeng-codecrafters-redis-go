@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
@@ -37,5 +38,5 @@ func (c *XAddCommand) Handle(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("$%d\r\n%s\r\n", len(id), id), nil
+	return resp.EncodeBulkString(id), nil
 }

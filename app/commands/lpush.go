@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
@@ -26,5 +27,5 @@ func (c *LPushCommand) Handle(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf(":%d\r\n", length), nil
+	return resp.EncodeInteger(length), nil
 }

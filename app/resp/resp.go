@@ -59,10 +59,41 @@ func (r *RESPReader) ReadCommand() ([]string, error) {
 	return args, nil
 }
 
-// BulkString 返回 RESP 批量字符串格式
-func BulkString(s string) string {
-	if s == "" {
-		return "$-1\r\n"
+// EncodeArray 编码RESP数组
+func EncodeArray(data []interface{}) string {
+	if data == nil || len(data) == 0 {
+		return EncodeNull()
 	}
+	result := fmt.Sprintf("*%d\r\n", len(data))
+	for _, item := range data {
+		switch v := item.(type) {
+		case string:
+			result += EncodeBulkString(v)
+		case []interface{}:
+			result += EncodeArray(v)
+		default:
+			result += EncodeBulkString(fmt.Sprintf("%v", v))
+		}
+	}
+	return result
+}
+
+// EncodeInteger 编码 RESP 整数
+func EncodeInteger(i int) string {
+	return fmt.Sprintf(":%d\r\n", i)
+}
+
+// EncodeBulkString 编码RESP批量字符串
+func EncodeBulkString(s string) string {
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(s), s)
+}
+
+// EncodeNull 编码RESP null
+func EncodeNull() string {
+	return "$-1\r\n"
+}
+
+// EncodeSimpleString 编码 RESP 简单字符串
+func EncodeSimpleString(s string) string {
+	return fmt.Sprintf("+%s\r\n", s)
 }

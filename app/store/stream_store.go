@@ -21,6 +21,7 @@ type StreamOps interface {
 	Exists(key string) bool
 	AddEntry(key, entryID string, fields map[string]string) (string, error)
 	GetRange(key string, startID string, endID string) ([]StreamEntry, error)
+	ReadStreams(keys []string, startIDs []string) (map[string][]StreamEntry, error)
 }
 
 // StreamEntry 表示流中的一个条目
@@ -228,6 +229,43 @@ func (s *StreamStore) GetRange(key string, startID string, endID string) ([]Stre
 			break
 		default:
 			result = append(result, entry)
+		}
+	}
+	return result, nil
+}
+
+// ReadStreams 实现XREAD的多流查询
+func (s *StreamStore) ReadStreams(keys []string, startIDs []string) (map[string][]StreamEntry, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	result := make(map[string][]StreamEntry)
+	for i, key := range keys {
+		startID := startIDs[i]
+		// 获取从startID到最大ID的条目
+		entries, err := s.GetRange(key, startID, "+")
+		if err != nil {
+			return nil, fmt.Errorf("error reading stream %s: %v", key, err)
+		}
+		// 过滤掉ID小于或等于startID的条目（XREAD要求严格大于）
+		startMillis, startSeq, err := normalizeRangeID(startID, false)
+		if err != nil {
+			return nil, fmt.Errorf("invalid start ID %s for stream %s: %v", startID, key, err)
+		}
+		filteredEntries := make([]StreamEntry, 0)
+		for _, entry := range entries {
+			entryMillis, entrySeq, err := parseID(entry.ID)
+			if err != nil {
+				return nil, fmt.Errorf("invalid entry ID %s in stream %s: %v", entry.ID, key, err)
+			}
+			// 仅保留严格大于startID的条目
+			if entryMillis > startMillis || (entryMillis == startMillis && entrySeq > startSeq) {
+				filteredEntries = append(filteredEntries, entry)
+			}
+		}
+		// 仅当有有效条目时添加结果
+		if len(filteredEntries) > 0 {
+			result[key] = filteredEntries
 		}
 	}
 	return result, nil

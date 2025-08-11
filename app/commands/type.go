@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
@@ -25,15 +26,13 @@ func (c *TypeCommand) Handle(args []string) (string, error) {
 	}
 	key := args[0]
 	if _, exists := c.stringOps.GetString(key); exists {
-		return "+string\r\n", nil
+		return resp.EncodeSimpleString("string"), nil
 	}
-
 	if c.listOps.Exists(key) {
-		return "+list\r\n", nil
+		return resp.EncodeSimpleString("list"), nil
 	}
-
 	if c.streamOps.Exists(key) {
-		return "+stream\r\n", nil
+		return resp.EncodeSimpleString("stream"), nil
 	}
-	return "+none\r\n", nil
+	return resp.EncodeSimpleString("none"), nil
 }

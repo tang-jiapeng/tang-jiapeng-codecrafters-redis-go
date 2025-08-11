@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 	"strconv"
 )
@@ -33,10 +34,10 @@ func (c *LRangeCommand) Handle(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	resp := fmt.Sprintf("*%d\r\n", len(elements))
-	for _, elem := range elements {
-		resp += fmt.Sprintf("$%d\r\n%s\r\n", len(elem), elem)
+	// 构建 RESP 数组
+	respArray := make([]interface{}, len(elements))
+	for i, elem := range elements {
+		respArray[i] = elem
 	}
-	fmt.Printf("LRANGE key=%s, start=%d, stop=%d, result=%v\n", key, start, stop, elements)
-	return resp, nil
+	return resp.EncodeArray(respArray), nil
 }

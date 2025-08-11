@@ -36,6 +36,7 @@ var Commands = CommandRegistry{
 	"TYPE":   NewTypeCommand(stringStore, listStore, streamStore),
 	"XADD":   NewXAddCommand(streamStore),
 	"XRANGE": NewXRangeCommand(streamStore),
+	"XREAD":  NewXReadCommand(streamStore),
 }
 
 // HandleConnection 处理客户端连接

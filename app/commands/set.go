@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 	"strconv"
 	"strings"
@@ -47,5 +48,5 @@ func (c *SetCommand) Handle(args []string) (string, error) {
 	}
 
 	c.stringOps.SetString(key, value, expiresAt, hasExpiry)
-	return "+OK\r\n", nil
+	return resp.EncodeSimpleString("OK"), nil
 }
