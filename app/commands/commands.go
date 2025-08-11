@@ -75,7 +75,8 @@ func HandleConnection(conn net.Conn) {
 		commandName := strings.ToUpper(args[0])
 		handler, exists := Commands[commandName]
 		if !exists {
-			conn.Write([]byte("-ERR unknown command\r\n"))
+			respErr := resp.EncodeError("unknown command '" + commandName + "'")
+			conn.Write([]byte(respErr))
 			continue
 		}
 
@@ -89,7 +90,7 @@ func HandleConnection(conn net.Conn) {
 		// 正常执行
 		response, err := handler.Handle(connCtx, args[1:])
 		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("-ERR %s\r\n", err.Error())))
+			conn.Write([]byte(resp.EncodeError(err.Error())))
 			continue
 		}
 		conn.Write([]byte(response))
