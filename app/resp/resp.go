@@ -61,9 +61,7 @@ func (r *RESPReader) ReadCommand() ([]string, error) {
 
 // EncodeArray 编码RESP数组
 func EncodeArray(data []interface{}) string {
-	if data == nil || len(data) == 0 {
-		return EncodeNull()
-	}
+	// 返回空数组 *0\r\n，而不是 null
 	result := fmt.Sprintf("*%d\r\n", len(data))
 	for _, item := range data {
 		switch v := item.(type) {
