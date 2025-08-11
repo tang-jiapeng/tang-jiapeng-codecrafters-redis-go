@@ -16,7 +16,7 @@ func NewGetCommand(s store.StringOps) *GetCommand {
 	}
 }
 
-func (c *GetCommand) Handle(args []string) (string, error) {
+func (c *GetCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("GET command requires exactly one argument")
 	}

@@ -9,7 +9,7 @@ import (
 type PingCommand struct {
 }
 
-func (c *PingCommand) Handle(args []string) (string, error) {
+func (c *PingCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) > 0 {
 		return "", fmt.Errorf("PING command takes no arguments")
 	}

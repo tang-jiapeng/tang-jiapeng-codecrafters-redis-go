@@ -16,7 +16,7 @@ func NewRPushCommand(s store.ListOps) *RPushCommand {
 	}
 }
 
-func (c *RPushCommand) Handle(args []string) (string, error) {
+func (c *RPushCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("RPUSH command requires at least two arguments")
 	}

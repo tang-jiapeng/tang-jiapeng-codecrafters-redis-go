@@ -16,7 +16,7 @@ func NewXRangeCommand(ss store.StreamOps) *XRangeCommand {
 	}
 }
 
-func (c *XRangeCommand) Handle(args []string) (string, error) {
+func (c *XRangeCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) != 3 {
 		return "", fmt.Errorf("XADD command requires exactly three arguments")
 	}

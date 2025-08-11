@@ -16,7 +16,7 @@ func NewIncrCommand(s store.StringOps) *IncrCommand {
 	}
 }
 
-func (c *IncrCommand) Handle(args []string) (string, error) {
+func (c *IncrCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 1 {
 		return "", fmt.Errorf("INCR command requires at least one argument")
 	}

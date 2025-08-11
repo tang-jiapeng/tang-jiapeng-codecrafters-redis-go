@@ -17,7 +17,7 @@ func NewLPopCommand(s store.ListOps) *LPopCommand {
 	}
 }
 
-func (c *LPopCommand) Handle(args []string) (string, error) {
+func (c *LPopCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 1 || len(args) > 2 {
 		return "", fmt.Errorf("LPOP command requires one or two arguments")
 	}

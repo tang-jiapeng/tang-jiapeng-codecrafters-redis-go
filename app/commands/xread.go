@@ -19,7 +19,7 @@ func NewXReadCommand(ss store.StreamOps) *XReadCommand {
 	}
 }
 
-func (c *XReadCommand) Handle(args []string) (string, error) {
+func (c *XReadCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 3 {
 		return "", fmt.Errorf("XREAD command requires at least three arguments")
 	}

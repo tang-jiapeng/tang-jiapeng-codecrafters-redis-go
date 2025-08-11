@@ -18,7 +18,7 @@ func NewBLPopCommand(s store.ListOps) *BLPopCommand {
 	}
 }
 
-func (c *BLPopCommand) Handle(args []string) (string, error) {
+func (c *BLPopCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) != 2 {
 		return "", fmt.Errorf("BLPOP command requires two arguments")
 	}

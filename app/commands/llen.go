@@ -16,7 +16,7 @@ func NewLLenCommand(s store.ListOps) *LLenCommand {
 	}
 }
 
-func (c *LLenCommand) Handle(args []string) (string, error) {
+func (c *LLenCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("LLEN command requires exactly one argument")
 	}

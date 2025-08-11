@@ -17,7 +17,7 @@ func NewLRangeCommand(s store.ListOps) *LRangeCommand {
 	}
 }
 
-func (c *LRangeCommand) Handle(args []string) (string, error) {
+func (c *LRangeCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("LRANGE command requires at least two arguments")
 	}

@@ -19,7 +19,7 @@ func NewSetCommand(s store.StringOps) *SetCommand {
 	}
 }
 
-func (c *SetCommand) Handle(args []string) (string, error) {
+func (c *SetCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("SET command requires at least two arguments")
 	}

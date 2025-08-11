@@ -20,7 +20,7 @@ func NewTypeCommand(s store.StringOps, l store.ListOps, ss store.StreamOps) *Typ
 	}
 }
 
-func (c *TypeCommand) Handle(args []string) (string, error) {
+func (c *TypeCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("TYPE command requires exactly one argument")
 	}

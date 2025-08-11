@@ -10,7 +10,7 @@ import (
 
 // CommandHandler 定义命令处理接口
 type CommandHandler interface {
-	Handle(args []string) (string, error)
+	Handle(ctx *ConnectionContext, args []string) (string, error)
 }
 
 // CommandRegistry 存储命令名称到处理器的映射
@@ -23,21 +23,24 @@ var streamStore = store.NewStreamStore()
 
 // Commands 注册命令
 var Commands = CommandRegistry{
-	"PING":   &PingCommand{},
-	"ECHO":   &EchoCommand{},
-	"SET":    NewSetCommand(stringStore),
-	"GET":    NewGetCommand(stringStore),
-	"INCR":   NewIncrCommand(stringStore),
-	"RPUSH":  NewRPushCommand(listStore),
-	"LRANGE": NewLRangeCommand(listStore),
-	"LPUSH":  NewLPushCommand(listStore),
-	"LLEN":   NewLLenCommand(listStore),
-	"LPOP":   NewLPopCommand(listStore),
-	"BLPOP":  NewBLPopCommand(listStore),
-	"TYPE":   NewTypeCommand(stringStore, listStore, streamStore),
-	"XADD":   NewXAddCommand(streamStore),
-	"XRANGE": NewXRangeCommand(streamStore),
-	"XREAD":  NewXReadCommand(streamStore),
+	"PING":    &PingCommand{},
+	"ECHO":    &EchoCommand{},
+	"COMMAND": &NoOpCommand{}, // 空实现
+	"INFO":    &NoOpCommand{}, // 空实现
+	"MULTI":   &MultiCommand{},
+	"SET":     NewSetCommand(stringStore),
+	"GET":     NewGetCommand(stringStore),
+	"INCR":    NewIncrCommand(stringStore),
+	"RPUSH":   NewRPushCommand(listStore),
+	"LRANGE":  NewLRangeCommand(listStore),
+	"LPUSH":   NewLPushCommand(listStore),
+	"LLEN":    NewLLenCommand(listStore),
+	"LPOP":    NewLPopCommand(listStore),
+	"BLPOP":   NewBLPopCommand(listStore),
+	"TYPE":    NewTypeCommand(stringStore, listStore, streamStore),
+	"XADD":    NewXAddCommand(streamStore),
+	"XRANGE":  NewXRangeCommand(streamStore),
+	"XREAD":   NewXReadCommand(streamStore),
 }
 
 // HandleConnection 处理客户端连接
@@ -50,6 +53,9 @@ func HandleConnection(conn net.Conn) {
 	}(conn)
 
 	reader := resp.NewRESPReader(conn)
+	// 每个连接单独一个事务上下文
+	connCtx := NewConnectionContext()
+
 	for {
 		args, err := reader.ReadCommand()
 		if err != nil {
@@ -73,12 +79,27 @@ func HandleConnection(conn net.Conn) {
 			conn.Write([]byte("-ERR unknown command\r\n"))
 			continue
 		}
-		response, err := handler.Handle(args[1:])
+
+		// 事务模式下且命令不是 MULTI/EXEC/DISCARD，就排队
+		if connCtx.InTransaction && (commandName != "MULTI" || commandName != "EXEC" || commandName != "DISCARD") {
+			connCtx.QueuedCommands = append(connCtx.QueuedCommands, args)
+			conn.Write([]byte("+QUEUED\r\n"))
+			continue
+		}
+
+		// 正常执行
+		response, err := handler.Handle(connCtx, args[1:])
 		if err != nil {
-			fmt.Println("Error handling command: ", err.Error())
 			conn.Write([]byte(fmt.Sprintf("-ERR %s\r\n", err.Error())))
 			continue
 		}
 		conn.Write([]byte(response))
 	}
+}
+
+// 空实现
+type NoOpCommand struct{}
+
+func (c *NoOpCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
+	return resp.EncodeSimpleString("OK"), nil
 }

@@ -16,7 +16,7 @@ func NewXAddCommand(ss store.StreamOps) *XAddCommand {
 	}
 }
 
-func (c *XAddCommand) Handle(args []string) (string, error) {
+func (c *XAddCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) < 3 {
 		return "", fmt.Errorf("XADD command requires at least three arguments")
 	}

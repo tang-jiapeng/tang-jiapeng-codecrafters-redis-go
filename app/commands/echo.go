@@ -8,7 +8,7 @@ import (
 // EchoCommand 处理 ECHO 命令
 type EchoCommand struct{}
 
-func (c *EchoCommand) Handle(args []string) (string, error) {
+func (c *EchoCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("ECHO command requires exactly one argument")
 	}
