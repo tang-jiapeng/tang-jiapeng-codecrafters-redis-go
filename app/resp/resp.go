@@ -98,7 +98,7 @@ func EncodeSimpleString(s string) string {
 
 // EncodeError 编码 RESP 错误
 func EncodeError(msg string) string {
-	return fmt.Sprintf("-%s\r\n", msg)
+	return fmt.Sprintf("-ERR %s\r\n", msg)
 }
 
 // EncodeArrayRaw 用于直接拼接已经编码好的RESP元素（字符串）
