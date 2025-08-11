@@ -22,7 +22,7 @@ type StreamOps interface {
 	AddEntry(key, entryID string, fields map[string]string) (string, error)
 	GetRange(key string, startID string, endID string) ([]StreamEntry, error)
 	ReadStreams(keys, startIDs []string) (map[string][]StreamEntry, error)
-	ReadStreamsBlocking(keys, startIDs string, timeout time.Duration) ([]StreamEntry, error)
+	ReadStreamsBlocking(keys, startIDs []string, timeout time.Duration) (map[string][]StreamEntry, error)
 }
 
 // StreamEntry 表示流中的一个条目
@@ -286,7 +286,10 @@ func (s *StreamStore) ReadStreams(keys, startIDs []string) (map[string][]StreamE
 }
 
 // ReadStreamsBlocking 阻塞读取大于指定ID的条目
-func (s *StreamStore) ReadStreamsBlocking(key, startID string, timeout time.Duration) ([]StreamEntry, error) {
+func (s *StreamStore) ReadStreamsBlocking(keys, startsID []string, timeout time.Duration) (map[string][]StreamEntry, error) {
+	// XREAD BLOCK只支持单个streamKey
+	key, startID := keys[0], startsID[0]
+
 	s.Lock()
 	// 创建等待通道并加入队列
 	ch := make(chan struct{})
@@ -310,16 +313,16 @@ func (s *StreamStore) ReadStreamsBlocking(key, startID string, timeout time.Dura
 		// 再次检查流状态
 		entries, exists := s.streams[key]
 		if !exists {
-			return []StreamEntry{}, nil
+			return map[string][]StreamEntry{}, nil
 		}
 
 		// 获取所有大于startID的条目
-		result := []StreamEntry{}
+		resultEntry := []StreamEntry{}
 		startMillis, startSeq, err := parseID(startID)
 		if err != nil {
 			return nil, err
 		}
-
+		result := make(map[string][]StreamEntry)
 		for _, entry := range entries {
 			entryMillis, entrySeq, err := parseID(entry.ID)
 			if err != nil {
@@ -327,10 +330,10 @@ func (s *StreamStore) ReadStreamsBlocking(key, startID string, timeout time.Dura
 			}
 
 			if entryMillis > startMillis || (entryMillis == startMillis && entrySeq > startSeq) {
-				result = append(result, entry)
+				resultEntry = append(resultEntry, entry)
 			}
 		}
-
+		result[key] = resultEntry
 		return result, nil
 	case <-timeoutCh: // 超时
 		// 从等待队列中移除自己
@@ -351,6 +354,6 @@ func (s *StreamStore) ReadStreamsBlocking(key, startID string, timeout time.Dura
 			}
 		}
 
-		return []StreamEntry{}, nil
+		return map[string][]StreamEntry{}, nil
 	}
 }
