@@ -60,8 +60,8 @@ func (c *XReadCommand) Handle(args []string) (string, error) {
 		if resultBlocking == nil || len(resultBlocking) == 0 {
 			return resp.EncodeNull(), nil
 		}
-		// 构建 RESP 数组
-		respArray := make([]interface{}, 0, len(resultBlocking))
+		// 构建流的条目数组
+		streamEntries := make([]interface{}, 0, len(resultBlocking))
 		for _, entry := range resultBlocking {
 			// 每个条目是一个数组：[ID, [field1, value1, field2, value2, ...]]
 			entryData := make([]interface{}, 2)
@@ -72,8 +72,9 @@ func (c *XReadCommand) Handle(args []string) (string, error) {
 				fields = append(fields, key, value)
 			}
 			entryData[1] = fields // 字段列表
-			respArray = append(respArray, entryData)
+			streamEntries = append(streamEntries, entryData)
 		}
+		respArray := []interface{}{key, streamEntries}
 
 		// 编码为 RESP 数组
 		return resp.EncodeArray(respArray), nil
