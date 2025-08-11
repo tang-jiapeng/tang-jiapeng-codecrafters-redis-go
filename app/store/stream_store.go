@@ -21,7 +21,8 @@ type StreamOps interface {
 	Exists(key string) bool
 	AddEntry(key, entryID string, fields map[string]string) (string, error)
 	GetRange(key string, startID string, endID string) ([]StreamEntry, error)
-	ReadStreams(keys []string, startIDs []string) (map[string][]StreamEntry, error)
+	ReadStreams(keys, startIDs []string) (map[string][]StreamEntry, error)
+	ReadStreamsBlocking(keys, startIDs string, timeout time.Duration) ([]StreamEntry, error)
 }
 
 // StreamEntry 表示流中的一个条目
@@ -34,11 +35,13 @@ type StreamEntry struct {
 type StreamStore struct {
 	sync.RWMutex
 	streams map[string][]StreamEntry
+	waiters map[string][]chan struct{} // 等待通道映射
 }
 
 func NewStreamStore() *StreamStore {
 	return &StreamStore{
 		streams: make(map[string][]StreamEntry),
+		waiters: make(map[string][]chan struct{}),
 	}
 }
 
@@ -165,6 +168,17 @@ func (s *StreamStore) AddEntry(key, entryID string, fields map[string]string) (s
 		Fields: fields,
 	}
 	s.streams[key] = append(s.streams[key], entry)
+
+	// 唤醒该键的第一个等待者
+	if waiters, ok := s.waiters[key]; ok && len(waiters) > 0 {
+		waiter := waiters[0]         // 获取最先等待的客户端
+		s.waiters[key] = waiters[1:] // 移除已唤醒的客户端
+		if len(s.waiters[key]) == 0 {
+			delete(s.waiters, key)
+		}
+		close(waiter) // 唤醒客户端（非阻塞）
+	}
+
 	return finalID, nil
 }
 
@@ -235,7 +249,7 @@ func (s *StreamStore) GetRange(key string, startID string, endID string) ([]Stre
 }
 
 // ReadStreams 实现XREAD的多流查询
-func (s *StreamStore) ReadStreams(keys []string, startIDs []string) (map[string][]StreamEntry, error) {
+func (s *StreamStore) ReadStreams(keys, startIDs []string) (map[string][]StreamEntry, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -269,4 +283,74 @@ func (s *StreamStore) ReadStreams(keys []string, startIDs []string) (map[string]
 		}
 	}
 	return result, nil
+}
+
+// ReadStreamsBlocking 阻塞读取大于指定ID的条目
+func (s *StreamStore) ReadStreamsBlocking(key, startID string, timeout time.Duration) ([]StreamEntry, error) {
+	s.Lock()
+	// 创建等待通道并加入队列
+	ch := make(chan struct{})
+	s.waiters[key] = append(s.waiters[key], ch)
+	s.Unlock()
+
+	// 处理超时
+	var timeoutCh <-chan time.Time
+	if timeout > 0 {
+		timeoutCh = time.After(timeout)
+	} else {
+		// 0 表示无限阻塞
+		timeoutCh = make(chan time.Time) // 永不超时的通道
+	}
+
+	select {
+	case <-ch: // 被唤醒
+		s.RLock()
+		defer s.RUnlock()
+
+		// 再次检查流状态
+		entries, exists := s.streams[key]
+		if !exists {
+			return []StreamEntry{}, nil
+		}
+
+		// 获取所有大于startID的条目
+		result := []StreamEntry{}
+		startMillis, startSeq, err := parseID(startID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, entry := range entries {
+			entryMillis, entrySeq, err := parseID(entry.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			if entryMillis > startMillis || (entryMillis == startMillis && entrySeq > startSeq) {
+				result = append(result, entry)
+			}
+		}
+
+		return result, nil
+	case <-timeoutCh: // 超时
+		// 从等待队列中移除自己
+		s.Lock()
+		defer s.Unlock()
+
+		if waiters, ok := s.waiters[key]; ok {
+			for i, waiter := range waiters {
+				if waiter == ch {
+					// 从切片中移除通道
+					s.waiters[key] = append(waiters[:i], waiters[i+1:]...)
+					// 清理空队列
+					if len(s.waiters[key]) == 0 {
+						delete(s.waiters, key)
+					}
+					break
+				}
+			}
+		}
+
+		return []StreamEntry{}, nil
+	}
 }

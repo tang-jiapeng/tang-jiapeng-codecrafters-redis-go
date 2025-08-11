@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
-	"strings"
 )
 
 type XRangeCommand struct {
@@ -27,10 +26,6 @@ func (c *XRangeCommand) Handle(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var respBuilder strings.Builder
-
-	respBuilder.WriteString(fmt.Sprintf("*%d\r\n", len(entries)))
-
 	// 构建 RESP 数组
 	respArray := make([]interface{}, 0, len(entries))
 	for _, entry := range entries {
