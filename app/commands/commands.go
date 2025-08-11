@@ -29,6 +29,7 @@ var Commands = CommandRegistry{
 	"INFO":    &NoOpCommand{}, // 空实现
 	"MULTI":   &MultiCommand{},
 	"EXEC":    &ExecCommand{},
+	"DISCARD": &DiscardCommand{},
 	"SET":     NewSetCommand(stringStore),
 	"GET":     NewGetCommand(stringStore),
 	"INCR":    NewIncrCommand(stringStore),
