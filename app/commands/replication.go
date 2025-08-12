@@ -102,12 +102,15 @@ func (h *ReplicaHandShaker) sendCmdAndRead(conn net.Conn, cmdName string, args .
 		parts = append(parts, a)
 	}
 	cmd := resp.EncodeArray(parts)
-	if _, err := conn.Write([]byte(cmd)); err != nil {
+
+	n, err := conn.Write([]byte(cmd))
+	if err != nil {
 		return err
 	}
+	fmt.Printf("Sent %d bytes: %q\n", n, cmd)
 	// 读取主节点回复
 	reader := resp.NewRESPReader(conn)
-	reply, err := reader.ReadCommand()
+	reply, err := reader.Read()
 	if err != nil {
 		return err
 	}

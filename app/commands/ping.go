@@ -13,6 +13,5 @@ func (c *PingCommand) Handle(ctx *ConnectionContext, args []string) (string, err
 	if len(args) > 0 {
 		return "", fmt.Errorf("PING command takes no arguments")
 	}
-	fmt.Println("PING command executed")
 	return resp.EncodeSimpleString("PONG"), nil
 }
