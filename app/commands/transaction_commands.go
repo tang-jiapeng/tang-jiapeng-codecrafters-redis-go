@@ -51,10 +51,10 @@ func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 				results = append(results, v)
 			case *RDBResponse:
 				// 事务中不支持RDB响应
-				results = append(results, resp.EncodeError("ERR RDB response not allowed in transaction"))
+				results = append(results, resp.EncodeError("RDB response not allowed in transaction"))
 			default:
 				// 处理其他类型
-				results = append(results, resp.EncodeError("ERR unsupported response type"))
+				results = append(results, resp.EncodeError("unsupported response type"))
 			}
 		}
 	}

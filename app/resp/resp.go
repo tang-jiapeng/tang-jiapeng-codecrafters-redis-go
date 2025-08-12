@@ -150,6 +150,8 @@ func EncodeArray(data []interface{}) string {
 		switch v := item.(type) {
 		case string:
 			result += EncodeBulkString(v)
+		case int:
+			result += EncodeInteger(v)
 		case []interface{}:
 			result += EncodeArray(v)
 		default:
@@ -182,4 +184,14 @@ func EncodeSimpleString(s string) string {
 // EncodeError 编码 RESP 错误
 func EncodeError(msg string) string {
 	return fmt.Sprintf("-ERR %s\r\n", msg)
+}
+
+// EncodeArrayRaw 用于直接拼接已经编码好的RESP元素（字符串）
+// 用于事务中直接返回已编码的命令执行结果
+func EncodeArrayRaw(elements []string) string {
+	result := fmt.Sprintf("*%d\r\n", len(elements))
+	for _, e := range elements {
+		result += e
+	}
+	return result
 }
