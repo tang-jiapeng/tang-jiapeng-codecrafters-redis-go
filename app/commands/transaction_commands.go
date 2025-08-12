@@ -61,7 +61,7 @@ func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 	ctx.InTransaction = false
 	ctx.QueuedCommands = nil
 
-	return resp.EncodeArray(results), nil
+	return resp.EncodeArrayRaw(results), nil
 }
 
 type DiscardCommand struct {
