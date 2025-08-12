@@ -81,6 +81,9 @@ func (h *ReplicaHandShaker) ConnectToMaster() error {
 	if err := h.sendCmdAndRead(masterConn, "REPLCONF", "capa", "psync2"); err != nil {
 		return err
 	}
+	if err := h.sendCmdAndRead(masterConn, "PSYNC", "?", "-1"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -103,19 +106,15 @@ func (h *ReplicaHandShaker) sendCmdAndRead(conn net.Conn, cmdName string, args .
 	}
 	cmd := resp.EncodeArray(parts)
 
-	n, err := conn.Write([]byte(cmd))
+	_, err := conn.Write([]byte(cmd))
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Sent %d bytes: %q\n", n, cmd)
 	// 读取主节点回复
 	reader := resp.NewRESPReader(conn)
-	reply, err := reader.Read()
+	_, err = reader.Read()
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("Master reply:", reply)
-
 	return nil
 }

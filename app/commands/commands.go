@@ -27,6 +27,7 @@ var Commands = CommandRegistry{
 	"ECHO":     &EchoCommand{},
 	"COMMAND":  &NoOpCommand{}, // 空实现
 	"REPLCONF": &NoOpCommand{},
+	"PSYNC":    &PsyncCommand{},
 	"INFO":     &InfoCommand{},
 	"MULTI":    &MultiCommand{},
 	"EXEC":     &ExecCommand{},
