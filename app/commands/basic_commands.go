@@ -2,15 +2,17 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/replication"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
+	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"strings"
 )
 
 // NoOpCommand 空实现
 type NoOpCommand struct{}
 
-func (c *NoOpCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+func (c *NoOpCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
 	return resp.EncodeSimpleString("OK"), nil
 }
 
@@ -18,7 +20,7 @@ func (c *NoOpCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 type PingCommand struct {
 }
 
-func (c *PingCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+func (c *PingCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
 	if len(args) > 0 {
 		return "", fmt.Errorf("PING command takes no arguments")
 	}
@@ -28,7 +30,7 @@ func (c *PingCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 // EchoCommand 处理 ECHO 命令
 type EchoCommand struct{}
 
-func (c *EchoCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+func (c *EchoCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("ECHO command requires exactly one argument")
 	}
@@ -37,16 +39,16 @@ func (c *EchoCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 
 type InfoCommand struct{}
 
-func (c *InfoCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+func (c *InfoCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
 	section := ""
 	if len(args) > 0 {
 		section = strings.ToLower(args[0])
 	}
 	if section == "replication" {
 		// 返回 replication 信息
-		info := fmt.Sprintf("role:%s\r\n", GetServerRole()) +
-			fmt.Sprintf("master_replid:%s\r\n", MasterReplID) +
-			fmt.Sprintf("master_repl_offset:%d\r\n", MasterReplOffset)
+		info := fmt.Sprintf("role:%s\r\n", replication.GetServerRole()) +
+			fmt.Sprintf("master_replid:%s\r\n", replication.GetMasterReplID()) +
+			fmt.Sprintf("master_repl_offset:%d\r\n", replication.GetMasterReplOffset())
 		return resp.EncodeBulkString(info), nil
 	}
 	// 默认返回空或其他 sections
@@ -67,7 +69,7 @@ func NewTypeCommand(s store.StringOps, l store.ListOps, ss store.StreamOps) *Typ
 	}
 }
 
-func (c *TypeCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+func (c *TypeCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("TYPE command requires exactly one argument")
 	}

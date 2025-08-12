@@ -1,4 +1,4 @@
-package commands
+package replication
 
 import (
 	"encoding/hex"
@@ -6,6 +6,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -14,15 +15,17 @@ const emptyRDBHex = "524544495330303131fa0972656469732d76657205372e322e30fa0a726
 // 复制相关的全局状态
 var (
 	serverRole       = "master"
-	MasterReplID     string
-	MasterReplOffset = 0
+	masterReplID     string
+	masterReplOffset = 0
 	emptyRDBData     []byte
+	replicaMu        sync.Mutex
+	replicaConns     []net.Conn
 )
 
 // 初始化复制ID
 func init() {
-	MasterReplID = generateReplicationID()
-	MasterReplOffset = 0
+	masterReplID = generateReplicationID()
+	masterReplOffset = 0
 	var err error
 	emptyRDBData, err = hex.DecodeString(emptyRDBHex)
 	if err != nil {
@@ -52,6 +55,21 @@ func SetServerRole(role string) {
 // GetServerRole 获取当前服务器角色
 func GetServerRole() string {
 	return serverRole
+}
+
+// GetEmptyRDBData 获取空 RDB 数据
+func GetEmptyRDBData() []byte {
+	return emptyRDBData
+}
+
+// GetMasterReplID 获取主节点复制 ID
+func GetMasterReplID() string {
+	return masterReplID
+}
+
+// GetMasterReplOffset 获取主节点复制 offset
+func GetMasterReplOffset() int {
+	return masterReplOffset
 }
 
 // InitiateReplication 启动副本到主节点的复制过程
@@ -126,4 +144,50 @@ func (h *ReplicaHandShaker) sendCmdAndRead(conn net.Conn, cmdName string, args .
 		return err
 	}
 	return nil
+}
+
+// AddReplicaConn 添加副本连接
+func AddReplicaConn(conn net.Conn) {
+	replicaMu.Lock()
+	defer replicaMu.Unlock()
+	replicaConns = append(replicaConns, conn)
+}
+
+// RemoveReplicaConn 移除副本连接
+func RemoveReplicaConn(conn net.Conn) {
+	replicaMu.Lock()
+	defer replicaMu.Unlock()
+
+	for i, c := range replicaConns {
+		if c == conn {
+			replicaConns = append(replicaConns[:i], replicaConns[:i+1]...)
+			break
+		}
+	}
+}
+
+// PropagateCommand 传播写命令到所有副本
+func PropagateCommand(fullArgs []string) {
+	if GetServerRole() != "master" {
+		return
+	}
+	// 编码为 RESP 数组
+	parts := make([]interface{}, len(fullArgs))
+	for i, arg := range fullArgs {
+		parts[i] = arg
+	}
+	encodedCmd := resp.EncodeArray(parts)
+
+	replicaMu.Lock()
+	conns := make([]net.Conn, len(replicaConns))
+	copy(conns, replicaConns)
+	replicaMu.Unlock()
+
+	for _, conn := range conns {
+		_, err := conn.Write([]byte(encodedCmd))
+		if err != nil {
+			fmt.Printf("Error propagating command to replica: %v\n", err)
+			RemoveReplicaConn(conn) // 移除失效连接
+		}
+	}
 }

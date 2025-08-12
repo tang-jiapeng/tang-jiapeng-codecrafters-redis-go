@@ -2,15 +2,17 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/replication"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
+	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"net"
 	"strings"
 )
 
 // CommandHandler 定义命令处理接口
 type CommandHandler interface {
-	Handle(ctx *ConnectionContext, args []string) (interface{}, error)
+	Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error)
 }
 
 // CommandRegistry 存储命令名称到处理器的映射
@@ -47,6 +49,20 @@ var Commands = CommandRegistry{
 	"XREAD":    NewXReadCommand(streamStore),
 }
 
+// isWriteCommand 检查命令是否为写命令
+func isWriteCommand(cmdName string) bool {
+	writeCommands := map[string]bool{
+		"SET":   true,
+		"INCR":  true,
+		"RPUSH": true,
+		"LPUSH": true,
+		"LPOP":  true,
+		"BLPOP": true,
+		"XADD":  true,
+	}
+	return writeCommands[cmdName]
+}
+
 type RDBResponse struct {
 	Message string
 	RDBData []byte
@@ -63,11 +79,14 @@ func HandleConnection(conn net.Conn) {
 		if err != nil {
 			fmt.Println("Error closing connection: ", err.Error())
 		}
+
+		// 清理副本连接
+		replication.RemoveReplicaConn(conn)
 	}(conn)
 
 	reader := resp.NewRESPReader(conn)
 	// 每个连接单独一个事务上下文
-	connCtx := NewConnectionContext()
+	connCtx := transaction.NewConnectionContext()
 
 	for {
 		args, err := reader.ReadCommand()
@@ -117,6 +136,15 @@ func HandleConnection(conn net.Conn) {
 		default:
 			// 处理未知类型
 			conn.Write([]byte(resp.EncodeError("Internal server error")))
+		}
+
+		// 如果是 PSYNC，添加为副本连接
+		if commandName == "PSYNC" {
+			replication.AddReplicaConn(conn)
+		}
+		// 非事务模式下，如果是写命令且成功，传播
+		if err == nil && !connCtx.InTransaction && isWriteCommand(commandName) {
+			replication.PropagateCommand(args)
 		}
 	}
 }
