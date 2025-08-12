@@ -16,7 +16,7 @@ func (c *InfoCommand) Handle(ctx *ConnectionContext, args []string) (string, err
 	}
 	if section == "replication" {
 		// 返回 replication 信息
-		info := "role:master\r\n" +
+		info := fmt.Sprintf("role:%s\r\n", GetServerRole()) +
 			fmt.Sprintf("master_replid:%s\r\n", MasterReplID) +
 			fmt.Sprintf("master_repl_offset:%d\r\n", MasterReplOffset)
 		return resp.EncodeBulkString(info), nil
