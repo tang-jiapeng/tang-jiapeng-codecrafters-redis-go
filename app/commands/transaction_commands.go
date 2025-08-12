@@ -42,11 +42,20 @@ func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 			continue
 		}
 
-		respStr, err := handler.Handle(ctx, cmdArgs[1:])
+		respValue, err := handler.Handle(ctx, cmdArgs[1:])
 		if err != nil {
 			results = append(results, resp.EncodeError(err.Error()))
 		} else {
-			results = append(results, respStr)
+			switch v := respValue.(type) {
+			case string:
+				results = append(results, v)
+			case *RDBResponse:
+				// 事务中不支持RDB响应
+				results = append(results, resp.EncodeError("ERR RDB response not allowed in transaction"))
+			default:
+				// 处理其他类型
+				results = append(results, resp.EncodeError("ERR unsupported response type"))
+			}
 		}
 	}
 	ctx.InTransaction = false

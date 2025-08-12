@@ -111,7 +111,7 @@ func HandleConnection(conn net.Conn) {
 			conn.Write([]byte(v))
 		case *RDBResponse:
 			conn.Write([]byte(v.Message))
-			rdbHeader := resp.EncodeInteger(len(v.RDBData))
+			rdbHeader := fmt.Sprintf("$%d\r\n", len(v.RDBData))
 			conn.Write([]byte(rdbHeader))
 			conn.Write(v.RDBData)
 		default:
