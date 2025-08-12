@@ -32,7 +32,7 @@ func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 		return resp.EncodeArray(nil), nil
 	}
 
-	results := make([]string, 0, len(ctx.QueuedCommands))
+	results := make([]interface{}, 0, len(ctx.QueuedCommands))
 	for _, cmdArgs := range ctx.QueuedCommands {
 		commandName := strings.ToUpper(cmdArgs[0])
 		handler, exists := Commands[commandName]
@@ -52,7 +52,7 @@ func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}
 	ctx.InTransaction = false
 	ctx.QueuedCommands = nil
 
-	return resp.EncodeArrayRaw(results), nil
+	return resp.EncodeArray(results), nil
 }
 
 type DiscardCommand struct {
