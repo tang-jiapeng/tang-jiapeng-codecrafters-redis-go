@@ -118,7 +118,7 @@ func (h *ReplicaHandShaker) ConnectToMaster() {
 		return
 	}
 
-	// 持续接收主节点传播的命令
+	// 握手完成后，处理主节点传播的命令
 	if err := h.handlePropagatedCommands(masterConn); err != nil {
 		fmt.Printf("handlePropagatedCommands failed: %v", err)
 		return
@@ -157,11 +157,22 @@ func (h *ReplicaHandShaker) handlePropagatedCommands(conn net.Conn) error {
 			continue
 		}
 
-		// 执行命令但不发送响应
-		_, err = handler.Handle(connCtx, args[1:])
+		// 执行命令
+		response, err := handler.Handle(connCtx, args[1:])
 		if err != nil {
 			fmt.Printf("Error processing propagated command %s: %v\n", commandName, err)
+			continue
 		}
+		// 仅对 REPLCONF GETACK 发送响应
+		if commandName == "REPLCONF" && len(args) >= 2 && strings.ToUpper(args[1]) == "GETACK" {
+			if response != nil {
+				_, err := conn.Write([]byte(response.(string)))
+				if err != nil {
+					return fmt.Errorf("Error sending REPLCONF ACK response: %v\n", err)
+				}
+			}
+		}
+		// 其他命令（如 SET、PING）不发送响应
 	}
 }
 
