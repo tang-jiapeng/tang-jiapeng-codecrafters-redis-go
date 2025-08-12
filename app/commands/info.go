@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/codecrafters-io/redis-starter-go/app/resp"
+	"fmt"
 	"strings"
 )
 
@@ -9,10 +9,18 @@ type InfoCommand struct {
 }
 
 func (c *InfoCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
-	// 当前支持 "INFO replication"
-	if len(args) > 0 && strings.ToLower(args[0]) == "replication" {
-		return resp.EncodeBulkString("role:" + GetServerRole()), nil
+	section := ""
+	if len(args) > 0 {
+		section = strings.ToLower(args[0])
 	}
-	// 其他 INFO 情况暂不处理
-	return resp.EncodeBulkString("role:" + GetServerRole()), nil
+	if section == "replication" {
+		// 返回 replication 信息
+		resp := fmt.Sprintf(
+			"# Replication\r\nrole:master\r\nmaster_replid:%s\r\nmaster_repl_offset:%d\r\n",
+			MasterReplID, MasterReplOffset,
+		)
+		return resp, nil
+	}
+	// 默认返回空或其他 sections
+	return "", nil
 }
