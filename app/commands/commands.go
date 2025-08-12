@@ -21,12 +21,14 @@ var stringStore = store.NewStringStore()
 var listStore = store.NewListStore()
 var streamStore = store.NewStreamStore()
 
+var serverRole = "master"
+
 // Commands 注册命令
 var Commands = CommandRegistry{
 	"PING":    &PingCommand{},
 	"ECHO":    &EchoCommand{},
 	"COMMAND": &NoOpCommand{}, // 空实现
-	"INFO":    &InfoCommand{}, // 空实现
+	"INFO":    &InfoCommand{},
 	"MULTI":   &MultiCommand{},
 	"EXEC":    &ExecCommand{},
 	"DISCARD": &DiscardCommand{},
@@ -103,4 +105,12 @@ type NoOpCommand struct{}
 
 func (c *NoOpCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
 	return resp.EncodeSimpleString("OK"), nil
+}
+
+func SetServerRole(role string) {
+	serverRole = role
+}
+
+func GetServerRole() string {
+	return serverRole
 }

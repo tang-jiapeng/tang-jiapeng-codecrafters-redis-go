@@ -16,7 +16,14 @@ func main() {
 
 	// 定义 --port 参数，默认 6379
 	port := flag.Int("port", 6379, "port to listen on")
+	replicaof := flag.String("replicaof", "", "Master host and port for replication")
 	flag.Parse()
+
+	role := "master"
+	if *replicaof != "" {
+		role = "slave"
+	}
+	commands.SetServerRole(role)
 
 	address := fmt.Sprintf("0.0.0.0:%d", *port)
 
