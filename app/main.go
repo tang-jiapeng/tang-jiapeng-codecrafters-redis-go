@@ -37,13 +37,7 @@ func main() {
 
 	// 如果是副本，启动后台连接主节点的协程
 	if role == "slave" {
-		go func() {
-			err := commands.InitiateReplication(masterHost, masterPort, *port)
-			if err != nil {
-				fmt.Println("InitiateReplication exist error: ", err)
-				os.Exit(1)
-			}
-		}()
+		go commands.InitiateReplication(masterHost, masterPort, *port)
 	}
 
 	address := fmt.Sprintf("0.0.0.0:%d", *port)

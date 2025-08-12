@@ -23,26 +23,27 @@ var streamStore = store.NewStreamStore()
 
 // Commands 注册命令
 var Commands = CommandRegistry{
-	"PING":    &PingCommand{},
-	"ECHO":    &EchoCommand{},
-	"COMMAND": &NoOpCommand{}, // 空实现
-	"INFO":    &InfoCommand{},
-	"MULTI":   &MultiCommand{},
-	"EXEC":    &ExecCommand{},
-	"DISCARD": &DiscardCommand{},
-	"SET":     NewSetCommand(stringStore),
-	"GET":     NewGetCommand(stringStore),
-	"INCR":    NewIncrCommand(stringStore),
-	"RPUSH":   NewRPushCommand(listStore),
-	"LRANGE":  NewLRangeCommand(listStore),
-	"LPUSH":   NewLPushCommand(listStore),
-	"LLEN":    NewLLenCommand(listStore),
-	"LPOP":    NewLPopCommand(listStore),
-	"BLPOP":   NewBLPopCommand(listStore),
-	"TYPE":    NewTypeCommand(stringStore, listStore, streamStore),
-	"XADD":    NewXAddCommand(streamStore),
-	"XRANGE":  NewXRangeCommand(streamStore),
-	"XREAD":   NewXReadCommand(streamStore),
+	"PING":     &PingCommand{},
+	"ECHO":     &EchoCommand{},
+	"COMMAND":  &NoOpCommand{}, // 空实现
+	"REPLCONF": &NoOpCommand{},
+	"INFO":     &InfoCommand{},
+	"MULTI":    &MultiCommand{},
+	"EXEC":     &ExecCommand{},
+	"DISCARD":  &DiscardCommand{},
+	"SET":      NewSetCommand(stringStore),
+	"GET":      NewGetCommand(stringStore),
+	"INCR":     NewIncrCommand(stringStore),
+	"RPUSH":    NewRPushCommand(listStore),
+	"LRANGE":   NewLRangeCommand(listStore),
+	"LPUSH":    NewLPushCommand(listStore),
+	"LLEN":     NewLLenCommand(listStore),
+	"LPOP":     NewLPopCommand(listStore),
+	"BLPOP":    NewBLPopCommand(listStore),
+	"TYPE":     NewTypeCommand(stringStore, listStore, streamStore),
+	"XADD":     NewXAddCommand(streamStore),
+	"XRANGE":   NewXRangeCommand(streamStore),
+	"XREAD":    NewXReadCommand(streamStore),
 }
 
 // HandleConnection 处理客户端连接

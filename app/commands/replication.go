@@ -46,17 +46,13 @@ func GetServerRole() string {
 }
 
 // InitiateReplication 启动副本到主节点的复制过程
-func InitiateReplication(masterHost string, masterPort, replicaPort int) error {
+func InitiateReplication(masterHost string, masterPort, replicaPort int) {
 	handShaker := &ReplicaHandShaker{
 		MasterHost:  masterHost,
 		MasterPort:  masterPort,
 		ReplicaPort: replicaPort,
 	}
-	err := handShaker.ConnectToMaster()
-	if err != nil {
-		return err
-	}
-	return nil
+	handShaker.ConnectToMaster()
 }
 
 // ReplicaHandShaker 处理副本到主节点的握手过程
@@ -79,12 +75,12 @@ func (h *ReplicaHandShaker) ConnectToMaster() error {
 	if err := h.sendPing(masterConn); err != nil {
 		return err
 	}
-	//if err := h.sendReplConfListeningPort(masterConn); err != nil {
-	//	return err
-	//}
-	//if err := h.sendReplConfCapa(masterConn); err != nil {
-	//	return err
-	//}
+	if err := h.sendReplConfListeningPort(masterConn); err != nil {
+		return err
+	}
+	if err := h.sendReplConfCapa(masterConn); err != nil {
+		return err
+	}
 	//if err := h.sendPsync(masterConn); err != nil {
 	//	return err
 	//}
@@ -128,7 +124,7 @@ func (h *ReplicaHandShaker) sendReplConfListeningPort(conn net.Conn) error {
 
 func (h *ReplicaHandShaker) sendReplConfCapa(conn net.Conn) error {
 	// 构建 REPLCONF capa 命令
-	replConf := resp.EncodeArray([]interface{}{"REPLCONF", "listening-port", "psync2"})
+	replConf := resp.EncodeArray([]interface{}{"REPLCONF", "capa", "psync2"})
 	if _, err := conn.Write([]byte(replConf)); err != nil {
 		return err
 	}
