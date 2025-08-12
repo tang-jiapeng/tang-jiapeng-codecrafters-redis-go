@@ -9,6 +9,80 @@ import (
 	"time"
 )
 
+type XAddCommand struct {
+	streamOps store.StreamOps
+}
+
+func NewXAddCommand(ss store.StreamOps) *XAddCommand {
+	return &XAddCommand{
+		streamOps: ss,
+	}
+}
+
+func (c *XAddCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+	if len(args) < 3 {
+		return "", fmt.Errorf("XADD command requires at least three arguments")
+	}
+	streamKey := args[0]
+	entryID := args[1]
+
+	// 验证键值对参数
+	fieldArgs := args[2:]
+	if len(fieldArgs)%2 != 0 {
+		return "", fmt.Errorf("wrong number of arguments for fields")
+	}
+	// 创建字段映射
+	fields := make(map[string]string)
+	for i := 0; i < len(fieldArgs); i += 2 {
+		fields[fieldArgs[i]] = fieldArgs[i+1]
+	}
+	// 添加条目到流
+	id, err := c.streamOps.AddEntry(streamKey, entryID, fields)
+	if err != nil {
+		return "", err
+	}
+	return resp.EncodeBulkString(id), nil
+}
+
+type XRangeCommand struct {
+	streamOps store.StreamOps
+}
+
+func NewXRangeCommand(ss store.StreamOps) *XRangeCommand {
+	return &XRangeCommand{
+		streamOps: ss,
+	}
+}
+
+func (c *XRangeCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+	if len(args) != 3 {
+		return "", fmt.Errorf("XADD command requires exactly three arguments")
+	}
+	streamKey := args[0]
+	startID, endID := args[1], args[2]
+	entries, err := c.streamOps.GetRange(streamKey, startID, endID)
+	if err != nil {
+		return "", err
+	}
+	// 构建 RESP 数组
+	respArray := make([]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		// 每个条目是一个数组：[ID, [field1, value1, field2, value2, ...]]
+		entryData := make([]interface{}, 2)
+		entryData[0] = entry.ID // 条目 ID
+		// 构建字段数组
+		fields := make([]interface{}, 0, len(entry.Fields)*2)
+		for key, value := range entry.Fields {
+			fields = append(fields, key, value)
+		}
+		entryData[1] = fields // 字段列表
+		respArray = append(respArray, entryData)
+	}
+
+	// 编码为 RESP 数组
+	return resp.EncodeArray(respArray), nil
+}
+
 type XReadCommand struct {
 	streamOps store.StreamOps
 }
@@ -19,7 +93,7 @@ func NewXReadCommand(ss store.StreamOps) *XReadCommand {
 	}
 }
 
-func (c *XReadCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
+func (c *XReadCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 3 {
 		return "", fmt.Errorf("XREAD command requires at least three arguments")
 	}

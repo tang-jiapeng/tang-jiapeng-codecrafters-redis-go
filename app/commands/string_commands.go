@@ -19,7 +19,7 @@ func NewSetCommand(s store.StringOps) *SetCommand {
 	}
 }
 
-func (c *SetCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
+func (c *SetCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("SET command requires at least two arguments")
 	}
@@ -49,4 +49,51 @@ func (c *SetCommand) Handle(ctx *ConnectionContext, args []string) (string, erro
 
 	c.stringOps.SetString(key, value, expiresAt, hasExpiry)
 	return resp.EncodeSimpleString("OK"), nil
+}
+
+type GetCommand struct {
+	stringOps store.StringOps
+}
+
+func NewGetCommand(s store.StringOps) *GetCommand {
+	return &GetCommand{
+		stringOps: s,
+	}
+}
+
+func (c *GetCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("GET command requires exactly one argument")
+	}
+
+	value, exists := c.stringOps.GetString(args[0])
+	if !exists {
+		return resp.EncodeNull(), nil
+	}
+
+	return resp.EncodeBulkString(value), nil
+}
+
+type IncrCommand struct {
+	stringOps store.StringOps
+}
+
+func NewIncrCommand(s store.StringOps) *IncrCommand {
+	return &IncrCommand{
+		stringOps: s,
+	}
+}
+
+func (c *IncrCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+	if len(args) < 1 {
+		return "", fmt.Errorf("INCR command requires at least one argument")
+	}
+
+	key := args[0]
+
+	newValue, err := c.stringOps.Increment(key)
+	if err != nil {
+		return "", err
+	}
+	return resp.EncodeInteger(newValue), nil
 }

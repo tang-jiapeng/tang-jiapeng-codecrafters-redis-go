@@ -10,7 +10,7 @@ import (
 
 // CommandHandler 定义命令处理接口
 type CommandHandler interface {
-	Handle(ctx *ConnectionContext, args []string) (string, error)
+	Handle(ctx *ConnectionContext, args []string) (interface{}, error)
 }
 
 // CommandRegistry 存储命令名称到处理器的映射
@@ -26,7 +26,7 @@ var Commands = CommandRegistry{
 	"PING":     &PingCommand{},
 	"ECHO":     &EchoCommand{},
 	"COMMAND":  &NoOpCommand{}, // 空实现
-	"REPLCONF": &NoOpCommand{},
+	"REPLCONF": &ReplconfCommand{},
 	"PSYNC":    &PsyncCommand{},
 	"INFO":     &InfoCommand{},
 	"MULTI":    &MultiCommand{},
@@ -45,6 +45,15 @@ var Commands = CommandRegistry{
 	"XADD":     NewXAddCommand(streamStore),
 	"XRANGE":   NewXRangeCommand(streamStore),
 	"XREAD":    NewXReadCommand(streamStore),
+}
+
+type RDBResponse struct {
+	Message string
+	RDBData []byte
+}
+
+func (r *RDBResponse) String() string {
+	return r.Message
 }
 
 // HandleConnection 处理客户端连接
@@ -90,19 +99,24 @@ func HandleConnection(conn net.Conn) {
 			continue
 		}
 
-		// 正常执行
+		// 执行命令处理
 		response, err := handler.Handle(connCtx, args[1:])
 		if err != nil {
 			conn.Write([]byte(resp.EncodeError(err.Error())))
 			continue
 		}
-		conn.Write([]byte(response))
+
+		switch v := response.(type) {
+		case string:
+			conn.Write([]byte(v))
+		case *RDBResponse:
+			conn.Write([]byte(v.Message))
+			rdbHeader := resp.EncodeInteger(len(v.RDBData))
+			conn.Write([]byte(rdbHeader))
+			conn.Write(v.RDBData)
+		default:
+			// 处理未知类型
+			conn.Write([]byte(resp.EncodeError("Internal server error")))
+		}
 	}
-}
-
-// 空实现
-type NoOpCommand struct{}
-
-func (c *NoOpCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
-	return resp.EncodeSimpleString("OK"), nil
 }

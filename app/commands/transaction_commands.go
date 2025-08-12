@@ -6,10 +6,22 @@ import (
 	"strings"
 )
 
+type MultiCommand struct{}
+
+func (c *MultiCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+	// 如果已经在事务模式，返回错误
+	if ctx.InTransaction {
+		return "", fmt.Errorf("MULTI calls can not be nested")
+	}
+	ctx.InTransaction = true
+	ctx.QueuedCommands = make([][]string, 0) // 清空事务队列
+	return resp.EncodeSimpleString("OK"), nil
+}
+
 type ExecCommand struct {
 }
 
-func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (string, error) {
+func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if !ctx.InTransaction {
 		// 实现未进入事务时的错误提示
 		return "", fmt.Errorf("EXEC without MULTI")
@@ -41,4 +53,17 @@ func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (string, err
 	ctx.QueuedCommands = nil
 
 	return resp.EncodeArrayRaw(results), nil
+}
+
+type DiscardCommand struct {
+}
+
+func (c *DiscardCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
+	if !ctx.InTransaction {
+		return "", fmt.Errorf("DISCARD without MULTI")
+	}
+	// 丢弃队列，退出事务
+	ctx.QueuedCommands = nil
+	ctx.InTransaction = false
+	return resp.EncodeSimpleString("OK"), nil
 }
