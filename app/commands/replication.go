@@ -165,11 +165,8 @@ func (h *ReplicaHandShaker) handlePropagatedCommands(conn net.Conn) error {
 		}
 		// 仅对 REPLCONF GETACK 发送响应
 		if commandName == "REPLCONF" && len(args) >= 2 && strings.ToUpper(args[1]) == "GETACK" {
-			if response != nil {
-				_, err := conn.Write([]byte(response.(string)))
-				if err != nil {
-					return fmt.Errorf("Error sending REPLCONF ACK response: %v\n", err)
-				}
+			if respStr, ok := response.(string); ok {
+				conn.Write([]byte(respStr))
 			}
 		}
 		// 其他命令（如 SET、PING）不发送响应
