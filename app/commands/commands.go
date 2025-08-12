@@ -2,17 +2,15 @@ package commands
 
 import (
 	"fmt"
-	"github.com/codecrafters-io/redis-starter-go/app/replication"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
-	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"net"
 	"strings"
 )
 
 // CommandHandler 定义命令处理接口
 type CommandHandler interface {
-	Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error)
+	Handle(ctx *ConnectionContext, args []string) (interface{}, error)
 }
 
 // CommandRegistry 存储命令名称到处理器的映射
@@ -81,12 +79,12 @@ func HandleConnection(conn net.Conn) {
 		}
 
 		// 清理副本连接
-		replication.RemoveReplicaConn(conn)
+		RemoveReplicaConn(conn)
 	}(conn)
 
 	reader := resp.NewRESPReader(conn)
 	// 每个连接单独一个事务上下文
-	connCtx := transaction.NewConnectionContext()
+	connCtx := NewConnectionContext()
 
 	for {
 		args, err := reader.ReadCommand()
@@ -140,11 +138,11 @@ func HandleConnection(conn net.Conn) {
 
 		// 如果是 PSYNC，添加为副本连接
 		if commandName == "PSYNC" {
-			replication.AddReplicaConn(conn)
+			AddReplicaConn(conn)
 		}
 		// 非事务模式下，如果是写命令且成功，传播
 		if err == nil && !connCtx.InTransaction && isWriteCommand(commandName) {
-			replication.PropagateCommand(args)
+			PropagateWriteCommand(args)
 		}
 	}
 }

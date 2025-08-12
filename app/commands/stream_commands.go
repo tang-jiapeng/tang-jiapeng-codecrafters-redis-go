@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
-	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ func NewXAddCommand(ss store.StreamOps) *XAddCommand {
 	}
 }
 
-func (c *XAddCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *XAddCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 3 {
 		return "", fmt.Errorf("XADD command requires at least three arguments")
 	}
@@ -55,7 +54,7 @@ func NewXRangeCommand(ss store.StreamOps) *XRangeCommand {
 	}
 }
 
-func (c *XRangeCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *XRangeCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) != 3 {
 		return "", fmt.Errorf("XADD command requires exactly three arguments")
 	}
@@ -94,7 +93,7 @@ func NewXReadCommand(ss store.StreamOps) *XReadCommand {
 	}
 }
 
-func (c *XReadCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *XReadCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 3 {
 		return "", fmt.Errorf("XREAD command requires at least three arguments")
 	}

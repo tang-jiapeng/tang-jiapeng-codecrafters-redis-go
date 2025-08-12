@@ -1,4 +1,4 @@
-package replication
+package commands
 
 import (
 	"encoding/hex"
@@ -6,6 +6,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"math/rand"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -89,29 +90,79 @@ type ReplicaHandShaker struct {
 	ReplicaPort int
 }
 
-func (h *ReplicaHandShaker) ConnectToMaster() error {
+func (h *ReplicaHandShaker) ConnectToMaster() {
 	masterAddr := fmt.Sprintf("%s:%d", h.MasterHost, h.MasterPort)
 	masterConn, err := h.connectWithRetry(masterAddr, 5, time.Second)
 	if err != nil {
-		return err
+		fmt.Printf("Failed to connect to master: %v", err)
+		return
 	}
 	defer masterConn.Close()
 
 	fmt.Println("Connected to master at", masterAddr)
 	// 执行握手步骤
 	if err := h.sendCmdAndRead(masterConn, "PING"); err != nil {
-		return err
+		fmt.Printf("PING failed: %v", err)
+		return
 	}
 	if err := h.sendCmdAndRead(masterConn, "REPLCONF", "listening-port", fmt.Sprintf("%d", h.ReplicaPort)); err != nil {
-		return err
+		fmt.Printf("REPLCONF listening-port failed: %v", err)
+		return
 	}
 	if err := h.sendCmdAndRead(masterConn, "REPLCONF", "capa", "psync2"); err != nil {
-		return err
+		fmt.Printf("REPLCONF capa failed: %v", err)
+		return
 	}
 	if err := h.sendCmdAndRead(masterConn, "PSYNC", "?", "-1"); err != nil {
-		return err
+		fmt.Printf("PSYNC failed: %v", err)
+		return
 	}
-	return nil
+
+	// 持续接收主节点传播的命令
+	if err := h.handlePropagatedCommands(masterConn); err != nil {
+		fmt.Printf("handlePropagatedCommands failed: %v", err)
+		return
+	}
+}
+
+// handlePropagatedCommands 处理主节点传播的命令
+func (h *ReplicaHandShaker) handlePropagatedCommands(conn net.Conn) error {
+	reader := resp.NewRESPReader(conn)
+	connCtx := NewConnectionContext()
+
+	for {
+		args, err := reader.ReadCommand()
+		if err != nil {
+			if err.Error() == "EOF" {
+				fmt.Println("Master connection closed")
+				return nil
+			}
+			return fmt.Errorf("error reading propagated command: %v", err)
+		}
+
+		if len(args) == 0 {
+			continue
+		}
+
+		commandName := strings.ToUpper(args[0])
+		handler, exists := Commands[commandName]
+		if !exists {
+			fmt.Printf("Unknown propagated command: %s\n", commandName)
+			continue
+		}
+
+		// 事务模式下排队
+		if connCtx.InTransaction && (commandName != "MULTI" && commandName != "EXEC" && commandName != "DISCARD") {
+			connCtx.QueuedCommands = append(connCtx.QueuedCommands, args)
+			continue
+		}
+
+		// 执行命令但不发送响应
+		_, err = handler.Handle(connCtx, args[1:])
+		if err != nil {
+			fmt.Printf("Error processing propagated command %s: %v\n", commandName, err)
+		}
+	}
 }
 
 func (h *ReplicaHandShaker) connectWithRetry(addr string, maxRetries int, delay time.Duration) (net.Conn, error) {
@@ -166,8 +217,8 @@ func RemoveReplicaConn(conn net.Conn) {
 	}
 }
 
-// PropagateCommand 传播写命令到所有副本
-func PropagateCommand(fullArgs []string) {
+// PropagateWriteCommand 传播写命令到所有副本（主节点使用）
+func PropagateWriteCommand(fullArgs []string) {
 	if GetServerRole() != "master" {
 		return
 	}

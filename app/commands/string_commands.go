@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
-	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ func NewSetCommand(s store.StringOps) *SetCommand {
 	}
 }
 
-func (c *SetCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *SetCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("SET command requires at least two arguments")
 	}
@@ -62,7 +61,7 @@ func NewGetCommand(s store.StringOps) *GetCommand {
 	}
 }
 
-func (c *GetCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *GetCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("GET command requires exactly one argument")
 	}
@@ -85,7 +84,7 @@ func NewIncrCommand(s store.StringOps) *IncrCommand {
 	}
 }
 
-func (c *IncrCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *IncrCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 1 {
 		return "", fmt.Errorf("INCR command requires at least one argument")
 	}

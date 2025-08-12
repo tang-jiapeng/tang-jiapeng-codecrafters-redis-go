@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/commands"
-	"github.com/codecrafters-io/redis-starter-go/app/replication"
 	"net"
 	"os"
 	"strings"
@@ -34,11 +33,11 @@ func main() {
 		masterHost = parts[0]
 		_, _ = fmt.Sscan(parts[1], &masterPort)
 	}
-	replication.SetServerRole(role)
+	commands.SetServerRole(role)
 
 	// 如果是副本，启动后台连接主节点的协程
 	if role == "slave" {
-		go replication.InitiateReplication(masterHost, masterPort, *port)
+		go commands.InitiateReplication(masterHost, masterPort, *port)
 	}
 
 	address := fmt.Sprintf("0.0.0.0:%d", *port)

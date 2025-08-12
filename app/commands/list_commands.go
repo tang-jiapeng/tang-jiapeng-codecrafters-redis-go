@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"github.com/codecrafters-io/redis-starter-go/app/store"
-	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"strconv"
 	"time"
 )
@@ -19,7 +18,7 @@ func NewLPushCommand(s store.ListOps) *LPushCommand {
 	}
 }
 
-func (c *LPushCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *LPushCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("RPUSH command requires at least two arguments")
 	}
@@ -43,7 +42,7 @@ func NewRPushCommand(s store.ListOps) *RPushCommand {
 	}
 }
 
-func (c *RPushCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *RPushCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("RPUSH command requires at least two arguments")
 	}
@@ -66,7 +65,7 @@ func NewLRangeCommand(s store.ListOps) *LRangeCommand {
 	}
 }
 
-func (c *LRangeCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *LRangeCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("LRANGE command requires at least two arguments")
 	}
@@ -101,7 +100,7 @@ func NewLLenCommand(s store.ListOps) *LLenCommand {
 	}
 }
 
-func (c *LLenCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *LLenCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("LLEN command requires exactly one argument")
 	}
@@ -123,7 +122,7 @@ func NewLPopCommand(s store.ListOps) *LPopCommand {
 	}
 }
 
-func (c *LPopCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *LPopCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) < 1 || len(args) > 2 {
 		return "", fmt.Errorf("LPOP command requires one or two arguments")
 	}
@@ -168,7 +167,7 @@ func NewBLPopCommand(s store.ListOps) *BLPopCommand {
 	}
 }
 
-func (c *BLPopCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *BLPopCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if len(args) != 2 {
 		return "", fmt.Errorf("BLPOP command requires two arguments")
 	}

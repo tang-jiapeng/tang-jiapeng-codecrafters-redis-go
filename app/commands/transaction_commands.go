@@ -2,15 +2,13 @@ package commands
 
 import (
 	"fmt"
-	"github.com/codecrafters-io/redis-starter-go/app/replication"
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
-	"github.com/codecrafters-io/redis-starter-go/app/transaction"
 	"strings"
 )
 
 type MultiCommand struct{}
 
-func (c *MultiCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *MultiCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	// 如果已经在事务模式，返回错误
 	if ctx.InTransaction {
 		return "", fmt.Errorf("MULTI calls can not be nested")
@@ -22,7 +20,7 @@ func (c *MultiCommand) Handle(ctx *transaction.ConnectionContext, args []string)
 
 type ExecCommand struct{}
 
-func (c *ExecCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *ExecCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if !ctx.InTransaction {
 		// 实现未进入事务时的错误提示
 		return "", fmt.Errorf("EXEC without MULTI")
@@ -59,7 +57,7 @@ func (c *ExecCommand) Handle(ctx *transaction.ConnectionContext, args []string) 
 			}
 			// 如果是写命令，传播
 			if err == nil && isWriteCommand(commandName) {
-				replication.PropagateCommand(cmdArgs)
+				PropagateWriteCommand(cmdArgs)
 			}
 		}
 	}
@@ -71,7 +69,7 @@ func (c *ExecCommand) Handle(ctx *transaction.ConnectionContext, args []string) 
 
 type DiscardCommand struct{}
 
-func (c *DiscardCommand) Handle(ctx *transaction.ConnectionContext, args []string) (interface{}, error) {
+func (c *DiscardCommand) Handle(ctx *ConnectionContext, args []string) (interface{}, error) {
 	if !ctx.InTransaction {
 		return "", fmt.Errorf("DISCARD without MULTI")
 	}
