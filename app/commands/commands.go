@@ -26,7 +26,7 @@ var Commands = CommandRegistry{
 	"PING":    &PingCommand{},
 	"ECHO":    &EchoCommand{},
 	"COMMAND": &NoOpCommand{}, // 空实现
-	"INFO":    &NoOpCommand{}, // 空实现
+	"INFO":    &InfoCommand{}, // 空实现
 	"MULTI":   &MultiCommand{},
 	"EXEC":    &ExecCommand{},
 	"DISCARD": &DiscardCommand{},
