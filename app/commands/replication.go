@@ -79,20 +79,20 @@ func (h *ReplicaHandShaker) ConnectToMaster() error {
 	if err := h.sendPing(masterConn); err != nil {
 		return err
 	}
-	if err := h.sendReplConfListeningPort(masterConn); err != nil {
-		return err
-	}
-	if err := h.sendReplConfCapa(masterConn); err != nil {
-		return err
-	}
-	if err := h.sendPsync(masterConn); err != nil {
-		return err
-	}
+	//if err := h.sendReplConfListeningPort(masterConn); err != nil {
+	//	return err
+	//}
+	//if err := h.sendReplConfCapa(masterConn); err != nil {
+	//	return err
+	//}
+	//if err := h.sendPsync(masterConn); err != nil {
+	//	return err
+	//}
 
 	// 读取主节点响应（后续阶段会处理）
-	if err := h.readMasterResponse(masterConn); err != nil {
-		return err
-	}
+	//if err := h.readMasterResponse(masterConn); err != nil {
+	//	return err
+	//}
 	return nil
 }
 
