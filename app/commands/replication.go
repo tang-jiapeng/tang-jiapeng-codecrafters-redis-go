@@ -72,23 +72,15 @@ func (h *ReplicaHandShaker) ConnectToMaster() error {
 
 	fmt.Println("Connected to master at", masterAddr)
 	// 执行握手步骤
-	if err := h.sendPing(masterConn); err != nil {
+	if err := h.sendCmdAndRead(masterConn, "PING"); err != nil {
 		return err
 	}
-	if err := h.sendReplConfListeningPort(masterConn); err != nil {
+	if err := h.sendCmdAndRead(masterConn, "REPLCONF", "listening-port", fmt.Sprintf("%d", h.ReplicaPort)); err != nil {
 		return err
 	}
-	if err := h.sendReplConfCapa(masterConn); err != nil {
+	if err := h.sendCmdAndRead(masterConn, "REPLCONF", "capa", "psync2"); err != nil {
 		return err
 	}
-	//if err := h.sendPsync(masterConn); err != nil {
-	//	return err
-	//}
-
-	// 读取主节点响应（后续阶段会处理）
-	//if err := h.readMasterResponse(masterConn); err != nil {
-	//	return err
-	//}
 	return nil
 }
 
@@ -103,49 +95,24 @@ func (h *ReplicaHandShaker) connectWithRetry(addr string, maxRetries int, delay 
 	return nil, fmt.Errorf("could not connect after %d attempts", maxRetries)
 }
 
-func (h *ReplicaHandShaker) sendPing(conn net.Conn) error {
-	// 构建 PING 命令
-	pingCmd := resp.EncodeArray([]interface{}{"PING"})
-	if _, err := conn.Write([]byte(pingCmd)); err != nil {
+func (h *ReplicaHandShaker) sendCmdAndRead(conn net.Conn, cmdName string, args ...string) error {
+	parts := make([]interface{}, 0, len(args)+1)
+	parts = append(parts, cmdName)
+	for _, a := range args {
+		parts = append(parts, a)
+	}
+	cmd := resp.EncodeArray(parts)
+	if _, err := conn.Write([]byte(cmd)); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (h *ReplicaHandShaker) sendReplConfListeningPort(conn net.Conn) error {
-	//构建 REPLCONF listening-port 命令
-	portStr := fmt.Sprintf("%d", h.ReplicaPort)
-	replConf := resp.EncodeArray([]interface{}{"REPLCONF", "listening-port", portStr})
-	if _, err := conn.Write([]byte(replConf)); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *ReplicaHandShaker) sendReplConfCapa(conn net.Conn) error {
-	// 构建 REPLCONF capa 命令
-	replConf := resp.EncodeArray([]interface{}{"REPLCONF", "capa", "psync2"})
-	if _, err := conn.Write([]byte(replConf)); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *ReplicaHandShaker) sendPsync(conn net.Conn) error {
-	// 构建 PSYNC 命令
-	psync := resp.EncodeArray([]interface{}{"PSYNC", "?", -1})
-	if _, err := conn.Write([]byte(psync)); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *ReplicaHandShaker) readMasterResponse(conn net.Conn) error {
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
+	// 读取主节点回复
+	reader := resp.NewRESPReader(conn)
+	reply, err := reader.ReadCommand()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Received from master: %s\n", string(buffer[:n]))
+
+	fmt.Println("Master reply:", reply)
+
 	return nil
 }
