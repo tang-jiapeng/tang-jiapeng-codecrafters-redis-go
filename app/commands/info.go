@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 	"strings"
 )
 
@@ -15,11 +16,10 @@ func (c *InfoCommand) Handle(ctx *ConnectionContext, args []string) (string, err
 	}
 	if section == "replication" {
 		// 返回 replication 信息
-		resp := fmt.Sprintf(
-			"# Replication\r\nrole:master\r\nmaster_replid:%s\r\nmaster_repl_offset:%d\r\n",
-			MasterReplID, MasterReplOffset,
-		)
-		return resp, nil
+		info := "role:master\r\n" +
+			fmt.Sprintf("master_replid:%s\r\n", MasterReplID) +
+			fmt.Sprintf("master_repl_offset:%d\r\n", MasterReplOffset)
+		return resp.EncodeBulkString(info), nil
 	}
 	// 默认返回空或其他 sections
 	return "", nil
